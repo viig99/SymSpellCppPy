@@ -1,0 +1,6 @@
+#ifndef SYMSPELLCPPPY_LIBRARY_H
+#define SYMSPELLCPPPY_LIBRARY_H
+
+void hello();
+
+#endif //SYMSPELLCPPPY_LIBRARY_H
