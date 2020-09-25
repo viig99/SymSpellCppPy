@@ -3,5 +3,5 @@ project(SymSpellCppPy)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_library(SymSpellCppPy SHARED library.cpp library.h include/BaseDistance.h include/BaseSimilarity.h include/Helpers.h include/DamerauOSA.h include/Levenshtein.h include/EditDistance.h)
+add_library(SymSpellCppPy SHARED library.cpp library.h)
 target_include_directories(SymSpellCppPy PRIVATE include)
