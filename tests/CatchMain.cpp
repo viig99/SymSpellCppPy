@@ -41,6 +41,28 @@ TEST_CASE("Testing English", "[english]") {
         }
     }
 
+    SECTION("Do Spell Correction With MaxEditDistance=2") {
+        std::unordered_map<std::string, std::string> words_within_distance = {
+                {"tke",          "take"},
+                {"extrine", "extreme"}
+        };
+
+        std::unordered_map<std::string, std::string> words_far_distance = {
+                {"elipnaht", "elephant"},
+                {"aotocrasie", "autocracy"}
+        };
+
+        for (auto &word : words_within_distance) {
+            std::vector<SuggestItem> results = symSpell.Lookup(word.first, Verbosity::Closest, 2);
+            REQUIRE(results[0].term == word.second);
+        }
+
+        for (auto &word : words_far_distance) {
+            std::vector<SuggestItem> results = symSpell.Lookup(word.first, Verbosity::Closest, 2);
+            REQUIRE(results.empty());
+        }
+    }
+
     SECTION("Correct Compound Mistakes") {
         std::unordered_map<std::string, std::string> compunded_sentences = {
                 {"whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him", "whereas to love head dated for much of theist who couldn't read in sixth grade and inspired him"},
