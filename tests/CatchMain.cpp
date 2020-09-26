@@ -15,7 +15,7 @@ TEST_CASE("Testing English", "[english]") {
     auto time = (float) ((end - start) / (CLOCKS_PER_SEC / 1000));
     INFO(XL("Library loaded: ") << time << XL(" ms"));
 
-    SECTION("Word Segmentation") {
+    SECTION("WORD SEGMENTATION") {
         std::unordered_map<std::string, std::string> sentences = {
                 {"thequickbrownfoxjumpsoverthelazydog",                                                "they quick brown fox jumps over therapy dog"},
                 {"itwasabrightcolddayinaprilandtheclockswerestrikingthirteen",                         "it was bright holiday in april another clocks were striking thirteen"},
