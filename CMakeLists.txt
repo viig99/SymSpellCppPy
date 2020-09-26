@@ -14,9 +14,7 @@ FetchContent_MakeAvailable(Catch2)
 
 
 add_library(SymSpellCppPy SHARED library.cpp library.h)
-target_include_directories(SymSpellCppPy PRIVATE include)
 
-add_executable(Catch2Test tests/CatchMain.cpp)
-target_sources(Catch2Test PRIVATE library.cpp library.h)
+add_executable(Catch2Test tests/CatchMain.cpp library.cpp library.h)
 target_include_directories(Catch2Test PRIVATE tests)
 target_link_libraries(Catch2Test Catch2::Catch2)
