@@ -17,17 +17,18 @@ enum DistanceAlgorithm {
 
 class EditDistance {
 private:
-    DistanceAlgorithm mAlgorithm;
     BaseDistance* distanceComparer;
+    DamerauOSA damerauOSADistance;
+    Levenshtein levenshteinDistance;
 
 public:
-    explicit EditDistance(DistanceAlgorithm algorithm): mAlgorithm(algorithm) {
+    explicit EditDistance(DistanceAlgorithm algorithm) {
         switch (algorithm) {
             case DistanceAlgorithm::DamerauOSADistance:
-                distanceComparer = dynamic_cast<BaseDistance*>(std::make_unique<DamerauOSA>().get());
+                this->distanceComparer = &damerauOSADistance;
                 break;
             case DistanceAlgorithm::LevenshteinDistance:
-                distanceComparer = dynamic_cast<BaseDistance*>(std::make_unique<Levenshtein>().get());
+                this->distanceComparer = &levenshteinDistance;
                 break;
             default:
                 throw std::invalid_argument("Unknown distance algorithm.");
@@ -35,6 +36,6 @@ public:
     }
 
     int Compare(std::string string1, std::string string2, int maxDistance) {
-        return (int) distanceComparer->Distance(std::move(string1), std::move(string2), maxDistance);
+        return (int) this->distanceComparer->Distance(std::move(string1), std::move(string2), maxDistance);
     }
 };
