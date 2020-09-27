@@ -32,4 +32,6 @@
 *.app
 
 .idea
-cmake-*
+*.egg-info/
+**/__pycache__/
+*build*/
