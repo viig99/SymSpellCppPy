@@ -14,8 +14,8 @@ class SymSpellCppPyTests(unittest.TestCase):
 
     def test_lookup_distance(self):
         self.assertEqual(self.symSpell.LookupTerm("extrine", SymSpellCppPy.Verbosity.Closest, 2)[0], "extreme")
-        self.assertEqual(self.symSpell.LookupTerm("elipnaht", SymSpellCppPy.Verbosity.Closest), [])
-        self.assertEqual(self.symSpell.LookupTerm("aotocrasie", SymSpellCppPy.Verbosity.Closest), [])
+        self.assertListEqual(self.symSpell.LookupTerm("elipnaht", SymSpellCppPy.Verbosity.Closest), [])
+        self.assertListEqual(self.symSpell.LookupTerm("aotocrasie", SymSpellCppPy.Verbosity.Closest), [])
 
 
 if __name__ == '__main__':
