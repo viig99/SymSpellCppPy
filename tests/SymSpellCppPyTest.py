@@ -1,6 +1,7 @@
 import unittest
 import SymSpellCppPy
 
+
 class SymSpellCppPyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -14,6 +15,7 @@ class SymSpellCppPyTests(unittest.TestCase):
 
     def test_lookup_distance(self):
         self.assertEqual(self.symSpell.LookupTerm("extrine", SymSpellCppPy.Verbosity.Closest, 2)[0], "extreme")
+        self.assertListEqual(self.symSpell.LookupTerm("extrine", SymSpellCppPy.Verbosity.Closest, 1), [])
         self.assertListEqual(self.symSpell.LookupTerm("elipnaht", SymSpellCppPy.Verbosity.Closest), [])
         self.assertListEqual(self.symSpell.LookupTerm("aotocrasie", SymSpellCppPy.Verbosity.Closest), [])
 
