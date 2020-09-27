@@ -16,7 +16,7 @@ TEST_CASE("Testing English", "[english]") {
     int end = clock();
     auto time = (float) ((end - start) / (CLOCKS_PER_SEC / 1000));
     INFO(XL("Library loaded: ") << time << XL(" ms"));
-
+    
     SECTION("Do Word Segmentation") {
         std::unordered_map<xstring, xstring> sentences = {
                 {XL("thequickbrownfoxjumpsoverthelazydog"),                                                XL("they quick brown fox jumps over therapy dog")},
@@ -77,4 +77,29 @@ TEST_CASE("Testing English", "[english]") {
             REQUIRE(results[0].term == sentence.second);
         }
     }
+    
+    SECTION("Check top verbosity") {
+        SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
+        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt",0, 1, XL(' '));
+        std::vector<SuggestItem> results = symSpellcustom.Lookup("stream", Verbosity::Top, 2);
+        REQUIRE(1 == results.size());
+        REQUIRE("streamc" == results[0].term);
+    }
+
+    SECTION("Check all verbosity") {
+        SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
+        symSpellcustom.LoadDictionary("../resources/frequenct_dictionary_en_test_verbosity.txt",0, 1, XL(' '));
+        std::vector<SuggestItem> results = symSpellcustom.Lookup("stream", Verbosity::All, 2);
+        REQUIRE(2 == results.size());
+    }
+
+    SECTION("check custom entry of dictionary") {
+        SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
+        SuggestionStage staging(100);
+        const xstring teststr = "take";
+        symSpellcustom.CreateDictionaryEntry(teststr,4,&staging);
+        std::vector<SuggestItem> results = symSpellcustom.Lookup("take",Verbosity::Closest,2);
+        REQUIRE("take" == results[0].term);
+    }
+    
 }
