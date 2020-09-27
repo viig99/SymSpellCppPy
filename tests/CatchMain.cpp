@@ -9,15 +9,10 @@ TEST_CASE("Testing English", "[english]") {
     const int initialCapacity = 82765;
     const int maxEditDistance = 2;
     const int prefixLength = 3;
-    SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
 
-    int start = clock();
-    symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
-    int end = clock();
-    auto time = (float) ((end - start) / (CLOCKS_PER_SEC / 1000));
-    INFO(XL("Library loaded: ") << time << XL(" ms"));
-    
     SECTION("Do Word Segmentation") {
+        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> sentences = {
                 {XL("thequickbrownfoxjumpsoverthelazydog"),                                                XL("they quick brown fox jumps over therapy dog")},
                 {XL("itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"),                         XL("it was bright holiday in april another clocks were striking thirteen")},
@@ -31,6 +26,8 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Do Spell Correction") {
+        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> words = {
                 {XL("tke"),          XL("take")},
                 {XL("abolution"),    XL("abolition")},
@@ -44,13 +41,15 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Do Spell Correction With MaxEditDistance=2") {
+        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> words_within_distance = {
-                {XL("tke"),          XL("take")},
+                {XL("tke"),     XL("take")},
                 {XL("extrine"), XL("extreme")}
         };
 
         std::unordered_map<xstring, xstring> words_far_distance = {
-                {XL("elipnaht"), XL("elephant")},
+                {XL("elipnaht"),   XL("elephant")},
                 {XL("aotocrasie"), XL("autocracy")}
         };
 
@@ -66,6 +65,8 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Correct Compound Mistakes") {
+        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> compunded_sentences = {
                 {XL("whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him"), XL("whereas to love head dated for much of theist who couldn't read in sixth grade and inspired him")},
                 {XL("in te dhird qarter oflast jear he hadlearned ofca sekretplan"),                                      XL("in to third quarter of last year he had learned of a secret plan")},
@@ -77,10 +78,10 @@ TEST_CASE("Testing English", "[english]") {
             REQUIRE(results[0].term == sentence.second);
         }
     }
-    
+
     SECTION("Check top verbosity") {
         SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
-        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt",0, 1, XL(' '));
+        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
         std::vector<SuggestItem> results = symSpellcustom.Lookup("stream", Verbosity::Top, 2);
         REQUIRE(1 == results.size());
         REQUIRE("streamc" == results[0].term);
@@ -88,7 +89,7 @@ TEST_CASE("Testing English", "[english]") {
 
     SECTION("Check all verbosity") {
         SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
-        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt",0, 1, XL(' '));
+        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
         std::vector<SuggestItem> results = symSpellcustom.Lookup("stream", Verbosity::All, 2);
         REQUIRE(2 == results.size());
     }
@@ -96,10 +97,8 @@ TEST_CASE("Testing English", "[english]") {
     SECTION("check custom entry of dictionary") {
         SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
         SuggestionStage staging(100);
-        const xstring teststr = "take";
-        symSpellcustom.CreateDictionaryEntry(teststr,4,&staging);
-        std::vector<SuggestItem> results = symSpellcustom.Lookup("take",Verbosity::Closest,2);
+        symSpellcustom.CreateDictionaryEntry("take", 4, &staging);
+        std::vector<SuggestItem> results = symSpellcustom.Lookup("take", Verbosity::Closest, 2);
         REQUIRE("take" == results[0].term);
     }
-    
 }
