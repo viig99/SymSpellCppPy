@@ -5,8 +5,7 @@ A Fast SymSpell port for python written in C++ using pybind11.
 ```shell script
 git clone git@github.com:viig99/SymSpellCppPy.git
 cd SymSpellCppPy
-mkdir build
-cd build
+mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ```
