@@ -76,6 +76,15 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("input"),
                  py::arg("verbosity"),
                  py::arg("maxEditDistance"),
-                 py::arg("includeUnknown"));
+                 py::arg("includeUnknown"))
+            .def("LookupCompoundTerm", py::overload_cast<const xstring&, int>(
+                    &symspellcpppy::SymSpell::LookupCompoundTerm),
+                 "lookup compound words from the dictionary",
+                 py::arg("input"),
+                 py::arg("editDistanceMax"))
+            .def("LookupCompoundTerm", py::overload_cast<const xstring&>(
+                    &symspellcpppy::SymSpell::LookupCompoundTerm),
+                 "lookup compound words from the dictionary",
+                 py::arg("input"));
 
 }

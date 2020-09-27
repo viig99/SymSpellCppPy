@@ -397,7 +397,7 @@ namespace symspellcpppy {
     std::vector<xstring> SymSpell::LookupTerm(xstring input, Verbosity verbosity) {
         auto results = Lookup(std::move(input), verbosity, this->maxDictionaryEditDistance, false);
         std::vector<xstring> terms;
-        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem& item) {
+        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem &item) {
             return item.term;
         });
         return terms;
@@ -406,16 +406,17 @@ namespace symspellcpppy {
     std::vector<xstring> SymSpell::LookupTerm(xstring input, Verbosity verbosity, int maxEditDistance) {
         auto results = Lookup(std::move(input), verbosity, maxEditDistance, false);
         std::vector<xstring> terms;
-        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem& item) {
+        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem &item) {
             return item.term;
         });
         return terms;
     }
 
-    std::vector<xstring> SymSpell::LookupTerm(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
+    std::vector<xstring>
+    SymSpell::LookupTerm(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
         auto results = Lookup(std::move(input), verbosity, maxEditDistance, includeUnknown);
         std::vector<xstring> terms;
-        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem& item) {
+        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem &item) {
             return item.term;
         });
         return terms;
@@ -628,6 +629,24 @@ namespace symspellcpppy {
         std::vector<SuggestItem> suggestionsLine;
         suggestionsLine.push_back(suggestion);
         return suggestionsLine;
+    }
+
+    std::vector<xstring> SymSpell::LookupCompoundTerm(const xstring &input) {
+        auto results = LookupCompound(input, this->maxDictionaryEditDistance);
+        std::vector<xstring> terms;
+        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem &item) {
+            return item.term;
+        });
+        return terms;
+    }
+
+    std::vector<xstring> SymSpell::LookupCompoundTerm(const xstring &input, int editDistanceMax) {
+        auto results = LookupCompound(input, editDistanceMax);
+        std::vector<xstring> terms;
+        std::transform(results.begin(), results.end(), std::back_inserter(terms), [](const SuggestItem &item) {
+            return item.term;
+        });
+        return terms;
     }
 
     Info SymSpell::WordSegmentation(const xstring &input) {

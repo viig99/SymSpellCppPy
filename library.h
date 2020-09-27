@@ -1,21 +1,6 @@
 #pragma once
 
-#include <fstream>
-#include <sstream>
-#include <cstring>
-#include <cstdlib>
-#include <algorithm>
-#include <cctype>
-#include <locale>
-#include <regex>
-#include <iostream>
-#include "unordered_set"
-
-#include "include/Defines.h"
-#include "include/Helpers.h"
-#include "include/EditDistance.h"
-
-#define UNICODE_SUPPORT
+//#define UNICODE_SUPPORT
 #define DEFAULT_SEPARATOR_CHAR XL('\t')
 #define DEFAULT_MAX_EDIT_DISTANCE 2
 #define DEFAULT_PREFIX_LENGTH 7
@@ -26,7 +11,20 @@
 #define MAXINT LLONG_MAX
 #define M
 #define MAXLONG MAXINT
-#define uint unsigned int
+
+#include <fstream>
+#include <sstream>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#include <cctype>
+#include <locale>
+#include <regex>
+#include <iostream>
+#include "unordered_set"
+#include "include/Defines.h"
+#include "include/Helpers.h"
+#include "include/EditDistance.h"
 
 namespace symspellcpppy {
     static inline void ltrim(xstring &s) {
@@ -170,6 +168,10 @@ namespace symspellcpppy {
         std::vector<SuggestItem> LookupCompound(const xstring &input);
 
         std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax);
+
+        std::vector<xstring> LookupCompoundTerm(const xstring &input);
+
+        std::vector<xstring> LookupCompoundTerm(const xstring &input, int editDistanceMax);
 
         static const int64_t N = 1024908267229L;
 

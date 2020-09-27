@@ -35,3 +35,4 @@
 *.egg-info/
 **/__pycache__/
 *build*/
+cleanup.sh
