@@ -22,13 +22,26 @@ class SymSpellCppPyTests(unittest.TestCase):
     def test_compound_mistakes(self):
         self.assertEqual(self.symSpell.LookupCompoundTerm(
             "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him")[0],
-            "whereas to love head dated for much of theist who couldn't read in sixth grade and inspired him")
+                         "whereas to love head dated for much of theist who couldn't read in sixth grade and inspired "
+                         "him")
         self.assertEqual(self.symSpell.LookupCompoundTerm(
             "in te dhird qarter oflast jear he hadlearned ofca sekretplan")[0],
-            "in to third quarter of last year he had learned of a secret plan")
+                         "in to third quarter of last year he had learned of a secret plan")
         self.assertEqual(self.symSpell.LookupCompoundTerm(
             "the bigjest playrs in te strogsommer film slatew ith plety of funn")[0],
-            "they biggest players in to strong summer film slate with plenty of fun")
+                         "they biggest players in to strong summer film slate with plenty of fun")
+
+    def test_word_segementation(self):
+        self.assertEqual(self.symSpell.WordSegmentation(
+            "thequickbrownfoxjumpsoverthelazydog").getCorrected(),
+                         "they quick brown fox jumps over therapy dog")
+        self.assertEqual(self.symSpell.WordSegmentation(
+            "itwasabrightcolddayinaprilandtheclockswerestrikingthirteen").getCorrected(),
+                         "it was bright holiday in april another clocks were striking thirteen")
+        self.assertEqual(self.symSpell.WordSegmentation(
+            "itwasthebestoftimesitwastheworstoftimesitwastheageofwisdomitwastheageoffoolishness").getCorrected(),
+                         "it waste best of times it waste worst of times it was thereof wisdom it was thereof "
+                         "foolishness")
 
 
 if __name__ == '__main__':

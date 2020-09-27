@@ -85,6 +85,21 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
             .def("LookupCompoundTerm", py::overload_cast<const xstring&>(
                     &symspellcpppy::SymSpell::LookupCompoundTerm),
                  "lookup compound words from the dictionary",
-                 py::arg("input"));
+                 py::arg("input"))
+            .def("WordSegmentation", py::overload_cast<const xstring&>(
+                    &symspellcpppy::SymSpell::WordSegmentation),
+                 "insert spaces in between words in a sentence",
+                 py::arg("input"))
+            .def("WordSegmentation", py::overload_cast<const xstring&, int>(
+                    &symspellcpppy::SymSpell::WordSegmentation),
+                 "insert spaces in between words in a sentence",
+                 py::arg("input"),
+                 py::arg("maxEditDistance"))
+            .def("WordSegmentation", py::overload_cast<const xstring&, int, int>(
+                    &symspellcpppy::SymSpell::WordSegmentation),
+                 "insert spaces in between words in a sentence",
+                 py::arg("input"),
+                 py::arg("maxEditDistance"),
+                 py::arg("maxSegmentationWordLength"));
 
 }
