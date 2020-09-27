@@ -78,7 +78,7 @@ TEST_CASE("Testing English", "[english]") {
     
     SECTION("Check top verbosity") {
         SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
-        symSpellcustom.LoadDictionary("../resources/frequenct_dictionary_en_test_verbosity.txt",0, 1, XL(' '));
+        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt",0, 1, XL(' '));
         std::vector<SuggestItem> results = symSpellcustom.Lookup("stream", Verbosity::Top, 2);
         REQUIRE(1 == results.size());
         REQUIRE("streamc" == results[0].term);
