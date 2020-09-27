@@ -3,6 +3,8 @@
 #include "catch2/catch.hpp"
 #include "../library.h"
 
+using namespace symspellcpppy;
+
 TEST_CASE("Testing English", "[english]") {
     const int initialCapacity = 82765;
     const int maxEditDistance = 2;
