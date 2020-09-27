@@ -1,5 +1,5 @@
 # SymSpellCppPy
-A Fast SymSpell port for python written in C++ using pybind11.
+A Fast SymSpell v6.5 port for python written in C++ using pybind11.
 
 ## Installation
 ```shell script
@@ -28,3 +28,7 @@ python3 setup.py build
 ```shell script
 python3 setup.py test
 ```
+
+## Acknowledgements
+* [SymSpell by @wolfgarbe](https://github.com/wolfgarbe/SymSpell)
+* [SymspellCPP by @AtheS21](https://github.com/AtheS21/SymspellCPP)
