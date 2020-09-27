@@ -16,3 +16,15 @@ For detailed list of command line test flags please refer to [Catch 2 Docs](http
 cd build
 ./Catch2Test -s
 ```
+
+## Python Bindings
+
+### Building
+```shell script
+python3 setup.py build
+```
+
+### Testing
+```shell script
+python3 setup.py test
+```
