@@ -7,22 +7,21 @@
 #include <unordered_map>
 #include <utility>
 #include "iostream"
-
-#	define XL(x) x
+#include "Defines.h"
 
 class Helpers {
 public:
-    static int NullDistanceResults(const std::string &string1, const std::string &string2, double maxDistance) {
+    static int NullDistanceResults(const xstring &string1, const xstring &string2, double maxDistance) {
         if (string1.empty())
             return (string2.empty()) ? 0 : (string2.size() <= maxDistance) ? string2.size() : -1;
         return (string1.size() <= maxDistance) ? string1.size() : -1;
     }
 
-    static int NullSimilarityResults(const std::string &string1, const std::string &string2, double minSimilarity) {
+    static int NullSimilarityResults(const xstring &string1, const xstring &string2, double minSimilarity) {
         return (string1.empty() && string2.empty()) ? 1 : (0 <= minSimilarity) ? 0 : -1;
     }
 
-    static void PrefixSuffixPrep(std::string string1, std::string string2, int &len1, int &len2, int &start) {
+    static void PrefixSuffixPrep(xstring string1, xstring string2, int &len1, int &len2, int &start) {
         len2 = string2.size();
         len1 = string1.size(); // this is also the minimum length of the two strings
         // suffix common to both strings can be ignored
@@ -110,7 +109,7 @@ public:
 
 class Node {
 public:
-    std::string suggestion;
+    xstring suggestion;
     int next;
 };
 
@@ -140,7 +139,7 @@ public:
         Nodes.Clear();
     }
 
-    void Add(int deleteHash, std::string suggestion) {
+    void Add(int deleteHash, xstring suggestion) {
         auto deletesFinded = Deletes.find(deleteHash);
         Entry newEntry{};
         newEntry.count = 0;
@@ -156,17 +155,17 @@ public:
         Nodes.Add(item);
     }
 
-    void CommitTo(std::unordered_map<int, std::vector<std::string>> *permanentDeletes) {
+    void CommitTo(std::unordered_map<int, std::vector<xstring>> *permanentDeletes) {
         auto permanentDeletesEnd = permanentDeletes->end();
         for (auto &Delete : Deletes) {
             auto permanentDeletesFinded = permanentDeletes->find(Delete.first);
-            std::vector<std::string> suggestions;
+            std::vector<xstring> suggestions;
             int i;
             if (permanentDeletesFinded != permanentDeletesEnd) {
                 suggestions = permanentDeletesFinded->second;
                 i = suggestions.size();
 
-                std::vector<std::string> newSuggestions;
+                std::vector<xstring> newSuggestions;
                 newSuggestions.reserve(suggestions.size() + Delete.second.count);
                 std::copy(suggestions.begin(), suggestions.end(), back_inserter(newSuggestions));
             } else {
@@ -190,14 +189,14 @@ public:
 
 class SuggestItem {
 public:
-    std::string term;
+    xstring term;
     int distance = 0;
     int64_t count = 0;
 
     SuggestItem() = default;
 
 
-    SuggestItem(std::string term, int distance, int64_t count) {
+    SuggestItem(xstring term, int distance, int64_t count) {
         this->term = std::move(term);
         this->distance = distance;
         this->count = count;
@@ -218,11 +217,11 @@ public:
     }
 
     int GetHashCode() const {
-        return std::hash<std::string>{}(this->term);
+        return std::hash<xstring>{}(this->term);
     }
 
-    std::string Tostring() const {
-        return XL("{") + term + XL(", ") + std::to_string(distance) + XL(", ") + std::to_string(count) + XL("}");
+    xstring Tostring() const {
+        return XL("{") + term + XL(", ") + to_xstring(distance) + XL(", ") + to_xstring(count) + XL("}");
     }
 
     static bool compare(const SuggestItem &s1, const SuggestItem &s2) {

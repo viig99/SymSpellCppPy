@@ -5,11 +5,12 @@
 #pragma once
 
 #include "iostream"
+#include "Defines.h"
 
 
 class BaseDistance {
 public:
-    virtual double Distance(std::string string1, std::string string2) = 0;
+    virtual double Distance(xstring string1, xstring string2) = 0;
 
-    virtual double Distance(std::string string1, std::string string2, double maxDistance) = 0;
+    virtual double Distance(xstring string1, xstring string2, double maxDistance) = 0;
 };

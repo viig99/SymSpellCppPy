@@ -11,9 +11,11 @@
 #include <iostream>
 #include "unordered_set"
 
+#include "include/Defines.h"
 #include "include/Helpers.h"
 #include "include/EditDistance.h"
 
+#define UNICODE_SUPPORT
 #define DEFAULT_SEPARATOR_CHAR XL('\t')
 #define DEFAULT_MAX_EDIT_DISTANCE 2
 #define DEFAULT_PREFIX_LENGTH 7
@@ -26,20 +28,20 @@
 #define MAXLONG MAXINT
 #define uint unsigned int
 
-static inline void ltrim(std::string &s) {
+static inline void ltrim(xstring &s) {
 
-    s.erase(s.begin(), find_if(s.begin(), s.end(), [](char ch) {
+    s.erase(s.begin(), find_if(s.begin(), s.end(), [](xchar ch) {
         return !isspace(ch);
     }));
 }
 
-static inline void rtrim(std::string &s) {
-    s.erase(find_if(s.rbegin(), s.rend(), [](char ch) {
+static inline void rtrim(xstring &s) {
+    s.erase(find_if(s.rbegin(), s.rend(), [](xchar ch) {
         return !isspace(ch);
     }).base(), s.end());
 }
 
-static inline void trim(std::string &s) {
+static inline void trim(xstring &s) {
     ltrim(s);
     rtrim(s);
 }
@@ -47,23 +49,23 @@ static inline void trim(std::string &s) {
 class Info {
 private:
 
-    std::string segmentedstring;
-    std::string correctedstring;
+    xstring segmentedstring;
+    xstring correctedstring;
     int distanceSum;
     double probabilityLogSum;
 public:
-    void set(std::string &seg, std::string &cor, int d, double prob) {
+    void set(xstring &seg, xstring &cor, int d, double prob) {
         segmentedstring = seg;
         correctedstring = cor;
         distanceSum = d;
         probabilityLogSum = prob;
     };
 
-    std::string getSegmented() {
+    xstring getSegmented() {
         return segmentedstring;
     };
 
-    std::string getCorrected() {
+    xstring getCorrected() {
         return correctedstring;
     };
 
@@ -91,9 +93,9 @@ private:
     int compactMask;
     DistanceAlgorithm distanceAlgorithm = DistanceAlgorithm::DamerauOSADistance;
     int maxDictionaryWordLength; //maximum std::unordered_map term length
-    std::unordered_map<int, std::vector<std::string>> *deletes = nullptr;
-    std::unordered_map<std::string, int64_t> words;
-    std::unordered_map<std::string, int64_t> belowThresholdWords;
+    std::unordered_map<int, std::vector<xstring>> *deletes = nullptr;
+    std::unordered_map<xstring, int64_t> words;
+    std::unordered_map<xstring, int64_t> belowThresholdWords;
 
 public:
     int MaxDictionaryEditDistance() const;
@@ -113,60 +115,60 @@ public:
                       int prefixLength = DEFAULT_PREFIX_LENGTH, int countThreshold = DEFAULT_COUNT_THRESHOLD,
                       unsigned char compactLevel = DEFAULT_COMPACT_LEVEL);
 
-    bool CreateDictionaryEntry(const std::string &key, int64_t count, SuggestionStage *staging);
+    bool CreateDictionaryEntry(const xstring &key, int64_t count, SuggestionStage *staging);
 
-    std::unordered_map<std::string, long> bigrams;
+    std::unordered_map<xstring, long> bigrams;
     int64_t bigramCountMin = MAXLONG;
 
     bool LoadBigramDictionary(const std::string &corpus, int termIndex, int countIndex,
-                              char separatorChars = DEFAULT_SEPARATOR_CHAR);
+                              xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
-    bool LoadBigramDictionary(std::ifstream &corpusStream, int termIndex, int countIndex,
-                              char separatorChars = DEFAULT_SEPARATOR_CHAR);
+    bool LoadBigramDictionary(xifstream &corpusStream, int termIndex, int countIndex,
+                              xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
     bool LoadDictionary(const std::string &corpus, int termIndex, int countIndex,
-                        char separatorChars = DEFAULT_SEPARATOR_CHAR);
+                        xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
-    bool LoadDictionary(std::ifstream &corpusStream, int termIndex, int countIndex,
-                        char separatorChars = DEFAULT_SEPARATOR_CHAR);
+    bool LoadDictionary(xifstream &corpusStream, int termIndex, int countIndex,
+                        xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
     bool CreateDictionary(const std::string &corpus);
 
-    bool CreateDictionary(std::ifstream &corpusStream);
+    bool CreateDictionary(xifstream &corpusStream);
 
     void PurgeBelowThresholdWords();
 
     void CommitStaged(SuggestionStage *staging);
 
-    std::vector<SuggestItem> Lookup(std::string input, Verbosity verbosity);
+    std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity);
 
-    std::vector<SuggestItem> Lookup(std::string input, Verbosity verbosity, int maxEditDistance);
+    std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance);
 
-    std::vector<SuggestItem> Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
+    std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
 
 private:
     bool
-    DeleteInSuggestionPrefix(std::string deleteSugg, int deleteLen, std::string suggestion, int suggestionLen) const;
+    DeleteInSuggestionPrefix(xstring deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
 
-    static std::vector<std::string> ParseWords(const std::string &text);
+    static std::vector<xstring> ParseWords(const xstring &text);
 
-    std::unordered_set<std::string> *
-    Edits(const std::string &word, int editDistance, std::unordered_set<std::string> *deleteWords);
+    std::unordered_set<xstring> *
+    Edits(const xstring &word, int editDistance, std::unordered_set<xstring> *deleteWords);
 
-    std::unordered_set<std::string> EditsPrefix(std::string key);
+    std::unordered_set<xstring> EditsPrefix(xstring key);
 
-    int GetstringHash(std::string s) const;
+    int GetstringHash(xstring s) const;
 
 public:
-    std::vector<SuggestItem> LookupCompound(const std::string &input);
+    std::vector<SuggestItem> LookupCompound(const xstring &input);
 
-    std::vector<SuggestItem> LookupCompound(const std::string &input, int editDistanceMax);
+    std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax);
 
     static const int64_t N = 1024908267229L;
 
-    Info WordSegmentation(const std::string &input);
+    Info WordSegmentation(const xstring &input);
 
-    Info WordSegmentation(const std::string &input, int maxEditDistance);
+    Info WordSegmentation(const xstring &input, int maxEditDistance);
 
-    Info WordSegmentation(const std::string &input, int maxEditDistance, int maxSegmentationWordLength);
+    Info WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength);
 };

@@ -43,10 +43,10 @@ SymSpell::SymSpell(int initialCapacity, int maxDictionaryEditDistance, int prefi
     if (compactLevel > 16) compactLevel = 16;
     this->compactMask = (UINT_MAX >> (3 + compactLevel)) << 2;
     this->maxDictionaryWordLength = 0;
-    this->words = std::unordered_map<std::string, int64_t>(initialCapacity);
+    this->words = std::unordered_map<xstring, int64_t>(initialCapacity);
 }
 
-bool SymSpell::CreateDictionaryEntry(const std::string &key, int64_t count, SuggestionStage *staging) {
+bool SymSpell::CreateDictionaryEntry(const xstring &key, int64_t count, SuggestionStage *staging) {
 
     if (count <= 0) {
         if (this->countThreshold > 0)
@@ -62,25 +62,25 @@ bool SymSpell::CreateDictionaryEntry(const std::string &key, int64_t count, Sugg
         if (count >= countThreshold) {
             belowThresholdWords.erase(key);
         } else {
-            belowThresholdWords.insert(std::pair<std::string, int64_t>(key, count));
+            belowThresholdWords.insert(std::pair<xstring, int64_t>(key, count));
             return false;
         }
     } else if (wordsFinded != words.end()) {
         countPrevious = wordsFinded->second;
         count = (MAXINT - countPrevious > count) ? countPrevious + count : MAXINT;
-        words.insert(std::pair<std::string, int64_t>(key, count));
+        words.insert(std::pair<xstring, int64_t>(key, count));
         return false;
     } else if (count < CountThreshold()) {
-        belowThresholdWords.insert(std::pair<std::string, int64_t>(key, count));
+        belowThresholdWords.insert(std::pair<xstring, int64_t>(key, count));
         return false;
     }
 
-    words.insert(std::pair<std::string, int64_t>(key, count));
+    words.insert(std::pair<xstring, int64_t>(key, count));
 
     if (key.size() > this->maxDictionaryWordLength) this->maxDictionaryWordLength = key.size();
 
     //create deletes
-    std::unordered_set<std::string> edits = EditsPrefix(key);
+    std::unordered_set<xstring> edits = EditsPrefix(key);
     if (staging != nullptr) {
         for (const auto &edit : edits) {
             staging->Add(GetstringHash(edit), key);
@@ -90,18 +90,18 @@ bool SymSpell::CreateDictionaryEntry(const std::string &key, int64_t count, Sugg
         for (const auto &edit : edits) {
             int deleteHash = GetstringHash(edit);
             auto deletesFinded = deletes->find(deleteHash);
-            std::vector<std::string> suggestions;
+            std::vector<xstring> suggestions;
             if (deletesFinded != deletes->end()) {
                 suggestions = deletesFinded->second;
-                std::vector<std::string> newSuggestions(suggestions.size() + 1);
+                std::vector<xstring> newSuggestions(suggestions.size() + 1);
                 for (int id = 0; id < suggestions.size(); id++) {
                     newSuggestions[id] = suggestions[id];
                 }
 
                 (*deletes)[deleteHash] = suggestions = newSuggestions;
             } else {
-                suggestions = std::vector<std::string>(1);
-                (*deletes).insert(std::pair<int, std::vector<std::string>>(deleteHash, suggestions));
+                suggestions = std::vector<xstring>(1);
+                (*deletes).insert(std::pair<int, std::vector<xstring>>(deleteHash, suggestions));
             }
             suggestions[suggestions.size() - 1] = key;
         }
@@ -111,11 +111,11 @@ bool SymSpell::CreateDictionaryEntry(const std::string &key, int64_t count, Sugg
     return true;
 }
 
-bool SymSpell::LoadBigramDictionary(const std::string &corpus, int termIndex, int countIndex, char separatorChars) {
-    std::ifstream corpusStream;
+bool SymSpell::LoadBigramDictionary(const std::string &corpus, int termIndex, int countIndex, xchar separatorChars) {
+    xifstream corpusStream;
     corpusStream.open(corpus);
 #ifdef UNICODE_SUPPORT
-    locale utf8(locale(), new codecvt_utf8<wchar_t>);
+    std::locale utf8(std::locale(), new std::codecvt_utf8<wchar_t>);
     corpusStream.imbue(utf8);
 #endif
     if (!corpusStream.is_open())
@@ -124,16 +124,16 @@ bool SymSpell::LoadBigramDictionary(const std::string &corpus, int termIndex, in
     return LoadBigramDictionary(corpusStream, termIndex, countIndex, separatorChars);
 }
 
-bool SymSpell::LoadBigramDictionary(std::ifstream &corpusStream, int termIndex, int countIndex, char separatorChars) {
-    std::string line;
+bool SymSpell::LoadBigramDictionary(xifstream &corpusStream, int termIndex, int countIndex, xchar separatorChars) {
+    xstring line;
     int linePartsLength = (separatorChars == DEFAULT_SEPARATOR_CHAR) ? 3 : 2;
     while (getline(corpusStream, line)) {
-        std::vector<std::string> lineParts;
-        std::stringstream ss(line);
-        std::string token;
+        std::vector<xstring> lineParts;
+        xstringstream ss(line);
+        xstring token;
         while (getline(ss, token, separatorChars))
             lineParts.push_back(token);
-        std::string key;
+        xstring key;
         int64_t count;
         if (lineParts.size() >= linePartsLength) {
             key = (separatorChars == DEFAULT_SEPARATOR_CHAR) ? lineParts[termIndex] + XL(" ") + lineParts[termIndex + 1]
@@ -142,13 +142,13 @@ bool SymSpell::LoadBigramDictionary(std::ifstream &corpusStream, int termIndex, 
                 count = stoll(lineParts[countIndex]);
 
             } catch (...) {
-                printf("Cannot convert %s to integer\n", lineParts[countIndex].c_str());
+                printf("Cannot convert %ls to integer\n", lineParts[countIndex].c_str());
             }
         } else {
             key = line;
             count = 1;
         }
-        std::pair<std::string, int64_t> element(key, count);
+        std::pair<xstring, int64_t> element(key, count);
         bigrams.insert(element);
         if (count < bigramCountMin) bigramCountMin = count;
     }
@@ -158,11 +158,11 @@ bool SymSpell::LoadBigramDictionary(std::ifstream &corpusStream, int termIndex, 
     return true;
 }
 
-bool SymSpell::LoadDictionary(const std::string &corpus, int termIndex, int countIndex, char separatorChars) {
+bool SymSpell::LoadDictionary(const std::string &corpus, int termIndex, int countIndex, xchar separatorChars) {
 
-    std::ifstream corpusStream(corpus);
+    xifstream corpusStream(corpus);
 #ifdef UNICODE_SUPPORT
-    locale utf8(locale(), new codecvt_utf8<wchar_t>);
+    std::locale utf8(std::locale(), new std::codecvt_utf8<wchar_t>);
     corpusStream.imbue(utf8);
 #endif
     if (!corpusStream.is_open())
@@ -171,17 +171,17 @@ bool SymSpell::LoadDictionary(const std::string &corpus, int termIndex, int coun
     return LoadDictionary(corpusStream, termIndex, countIndex, separatorChars);
 }
 
-bool SymSpell::LoadDictionary(std::ifstream &corpusStream, int termIndex, int countIndex, char separatorChars) {
+bool SymSpell::LoadDictionary(xifstream &corpusStream, int termIndex, int countIndex, xchar separatorChars) {
     SuggestionStage staging(16384);
-    std::string line;
+    xstring line;
     int i = 0;
     int start, end;
     start = clock();
     while (getline(corpusStream, line)) {
         i++;
-        std::vector<std::string> lineParts;
-        std::stringstream ss(line);
-        std::string token;
+        std::vector<xstring> lineParts;
+        xstringstream ss(line);
+        xstring token;
         while (getline(ss, token, separatorChars))
             lineParts.push_back(token);
         if (lineParts.size() >= 2) {
@@ -194,7 +194,7 @@ bool SymSpell::LoadDictionary(std::ifstream &corpusStream, int termIndex, int co
 
     }
     if (this->deletes == nullptr)
-        this->deletes = new std::unordered_map<int, std::vector<std::string>>(staging.DeleteCount());
+        this->deletes = new std::unordered_map<int, std::vector<xstring>>(staging.DeleteCount());
     CommitStaged(&staging);
     if (this->EntryCount() == 0)
         return false;
@@ -202,10 +202,10 @@ bool SymSpell::LoadDictionary(std::ifstream &corpusStream, int termIndex, int co
 }
 
 bool SymSpell::CreateDictionary(const std::string &corpus) {
-    std::ifstream corpusStream;
+    xifstream corpusStream;
     corpusStream.open(corpus);
 #ifdef UNICODE_SUPPORT
-    locale utf8(locale(), new codecvt_utf8<wchar_t>);
+    std::locale utf8(std::locale(), new std::codecvt_utf8<wchar_t>);
     corpusStream.imbue(utf8);
 #endif
     if (!corpusStream.is_open()) return false;
@@ -213,17 +213,17 @@ bool SymSpell::CreateDictionary(const std::string &corpus) {
     return CreateDictionary(corpusStream);
 }
 
-bool SymSpell::CreateDictionary(std::ifstream &corpusStream) {
-    std::string line;
+bool SymSpell::CreateDictionary(xifstream &corpusStream) {
+    xstring line;
     SuggestionStage staging = SuggestionStage(16384);
     while (getline(corpusStream, line)) {
-        for (const std::string &key : ParseWords(line)) {
+        for (const xstring &key : ParseWords(line)) {
             CreateDictionaryEntry(key, 1, &staging);
         }
 
     }
     if (this->deletes == nullptr)
-        this->deletes = new std::unordered_map<int, std::vector<std::string>>(staging.DeleteCount());
+        this->deletes = new std::unordered_map<int, std::vector<xstring>>(staging.DeleteCount());
     CommitStaged(&staging);
     if (this->EntryCount() == 0)
         return false;
@@ -238,16 +238,16 @@ void SymSpell::CommitStaged(SuggestionStage *staging) {
     staging->CommitTo(deletes);
 }
 
-std::vector<SuggestItem> SymSpell::Lookup(std::string input, Verbosity verbosity) {
+std::vector<SuggestItem> SymSpell::Lookup(xstring input, Verbosity verbosity) {
     return Lookup(std::move(input), verbosity, this->maxDictionaryEditDistance, false);
 }
 
-std::vector<SuggestItem> SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance) {
+std::vector<SuggestItem> SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance) {
     return Lookup(std::move(input), verbosity, maxEditDistance, false);
 }
 
 std::vector<SuggestItem>
-SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
+SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
     int skip = 0;
     if (maxEditDistance > this->maxDictionaryEditDistance) throw std::invalid_argument("maxEditDistance");
 
@@ -265,14 +265,14 @@ SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bo
     if (maxEditDistance == 0) skip = 1;
 
     if (!skip) {
-        std::unordered_set<std::string> hashset1;
-        std::unordered_set<std::string> hashset2;
+        std::unordered_set<xstring> hashset1;
+        std::unordered_set<xstring> hashset2;
         hashset2.insert(input);
 
         int maxEditDistance2 = maxEditDistance;
         int candidatePointer = 0;
-        std::vector<std::string> singleSuggestion = {XL("")};
-        std::vector<std::string> candidates;
+        std::vector<xstring> singleSuggestion = {XL("")};
+        std::vector<xstring> candidates;
 
         int inputPrefixLen = inputLen;
         if (inputPrefixLen > prefixLength) {
@@ -283,7 +283,7 @@ SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bo
         }
         auto distanceComparer = EditDistance(this->distanceAlgorithm);
         while (candidatePointer < candidates.size()) {
-            std::string candidate = candidates[candidatePointer++];
+            xstring candidate = candidates[candidatePointer++];
             int candidateLen = candidate.size();
             int lengthDiff = inputPrefixLen - candidateLen;
 
@@ -294,7 +294,7 @@ SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bo
 
             //read candidate entry from std::unordered_map
             if (deletes->count(GetstringHash(candidate))) {
-                std::vector<std::string> dictSuggestions = deletes->at(GetstringHash(candidate));
+                std::vector<xstring> dictSuggestions = deletes->at(GetstringHash(candidate));
                 for (auto suggestion : dictSuggestions) {
                     int suggestionLen = suggestion.size();
                     if (suggestion == input) continue;
@@ -316,7 +316,7 @@ SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bo
                         auto flag = hashset2.insert(suggestion);
                         if (distance > maxEditDistance2 || !flag.second) continue;
                     } else if (suggestionLen == 1) {
-                        if (input.find(suggestion[0]) == std::string::npos)
+                        if (input.find(suggestion[0]) == xstring::npos)
                             distance = inputLen;
                         else
                             distance = inputLen - 1;
@@ -370,8 +370,8 @@ SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bo
                 if (verbosity != All && lengthDiff >= maxEditDistance2) continue;
 
                 for (int i = 0; i < candidateLen; i++) {
-                    std::string temp(candidate);
-                    std::string del = temp.erase(i, 1);
+                    xstring temp(candidate);
+                    xstring del = temp.erase(i, 1);
 
                     if (hashset1.insert(del).second) { candidates.push_back(del); }
                 }
@@ -387,24 +387,24 @@ SymSpell::Lookup(std::string input, Verbosity verbosity, int maxEditDistance, bo
     return suggestions;
 }//end if
 
-bool SymSpell::DeleteInSuggestionPrefix(std::string deleteSugg, int deleteLen, std::string suggestion,
+bool SymSpell::DeleteInSuggestionPrefix(xstring deleteSugg, int deleteLen, xstring suggestion,
                                         int suggestionLen) const {
     if (deleteLen == 0) return true;
     if (prefixLength < suggestionLen) suggestionLen = prefixLength;
     int j = 0;
     for (int i = 0; i < deleteLen; i++) {
-        char delChar = deleteSugg[i];
+        xchar delChar = deleteSugg[i];
         while (j < suggestionLen && delChar != suggestion[j]) j++;
         if (j == suggestionLen) return false;
     }
     return true;
 }
 
-std::vector<std::string> SymSpell::ParseWords(const std::string &text) {
-    std::regex r(XL("['’\\w-\\[_\\]]+"));
-    std::smatch m;
-    std::vector<std::string> matches;
-    std::string::const_iterator ptr(text.cbegin());
+std::vector<xstring> SymSpell::ParseWords(const xstring &text) {
+    xregex r(XL("['’\\w-\\[_\\]]+"));
+    xsmatch m;
+    std::vector<xstring> matches;
+    xstring::const_iterator ptr(text.cbegin());
     while (regex_search(ptr, text.cend(), m, r)) {
         matches.push_back(m[0]);
         ptr = m.suffix().first;
@@ -412,13 +412,13 @@ std::vector<std::string> SymSpell::ParseWords(const std::string &text) {
     return matches;
 }
 
-std::unordered_set<std::string> *
-SymSpell::Edits(const std::string &word, int editDistance, std::unordered_set<std::string> *deleteWords) {
+std::unordered_set<xstring> *
+SymSpell::Edits(const xstring &word, int editDistance, std::unordered_set<xstring> *deleteWords) {
     editDistance++;
     if (word.size() > 1) {
         for (int i = 0; i < word.size(); i++) {
-            std::string temp(word);
-            std::string del = temp.erase(i, 1);
+            xstring temp(word);
+            xstring del = temp.erase(i, 1);
             if (deleteWords->insert(del).second) {
                 if (editDistance < maxDictionaryEditDistance) Edits(del, editDistance, deleteWords);
             }
@@ -427,8 +427,8 @@ SymSpell::Edits(const std::string &word, int editDistance, std::unordered_set<st
     return deleteWords;
 }
 
-std::unordered_set<std::string> SymSpell::EditsPrefix(std::string key) {
-    std::unordered_set<std::string> m = std::unordered_set<std::string>();
+std::unordered_set<xstring> SymSpell::EditsPrefix(xstring key) {
+    std::unordered_set<xstring> m = std::unordered_set<xstring>();
     if (key.size() <= maxDictionaryEditDistance) m.insert(XL(""));
     if (key.size() > prefixLength) key = key.substr(0, prefixLength);
     m.insert(key);
@@ -436,7 +436,7 @@ std::unordered_set<std::string> SymSpell::EditsPrefix(std::string key) {
     return m;
 }
 
-int SymSpell::GetstringHash(std::string s) const {
+int SymSpell::GetstringHash(xstring s) const {
     int len = s.size();
     int lenMask = len;
     if (lenMask > 3) lenMask = 3;
@@ -454,12 +454,12 @@ int SymSpell::GetstringHash(std::string s) const {
     return (int) hash;
 }
 
-std::vector<SuggestItem> SymSpell::LookupCompound(const std::string &input) {
+std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input) {
     return LookupCompound(input, this->maxDictionaryEditDistance);
 }
 
-std::vector<SuggestItem> SymSpell::LookupCompound(const std::string &input, int editDistanceMax) {
-    std::vector<std::string> termList1 = ParseWords(input);
+std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax) {
+    std::vector<xstring> termList1 = ParseWords(input);
 
     std::vector<SuggestItem> suggestions;     //suggestions for a single term
     std::vector<SuggestItem> suggestionParts; //1 line with separate parts
@@ -506,8 +506,8 @@ std::vector<SuggestItem> SymSpell::LookupCompound(const std::string &input, int 
 
             if (termList1[i].size() > 1) {
                 for (int j = 1; j < termList1[i].size(); j++) {
-                    std::string part1 = termList1[i].substr(0, j);
-                    std::string part2 = termList1[i].substr(j);
+                    xstring part1 = termList1[i].substr(0, j);
+                    xstring part2 = termList1[i].substr(j);
                     SuggestItem suggestionSplit = SuggestItem();
                     std::vector<SuggestItem> suggestions1 = Lookup(part1, Top, editDistanceMax);
                     if (!suggestions1.empty()) {
@@ -576,7 +576,7 @@ std::vector<SuggestItem> SymSpell::LookupCompound(const std::string &input, int 
     SuggestItem suggestion = SuggestItem();
 
     double count = N;
-    std::string s;
+    xstring s;
     for (const SuggestItem &si : suggestionParts) {
         s += (si.term + XL(" "));
         count *= (double) si.count / (double) N;
@@ -591,15 +591,15 @@ std::vector<SuggestItem> SymSpell::LookupCompound(const std::string &input, int 
     return suggestionsLine;
 }
 
-Info SymSpell::WordSegmentation(const std::string &input) {
+Info SymSpell::WordSegmentation(const xstring &input) {
     return WordSegmentation(input, this->MaxDictionaryEditDistance(), this->maxDictionaryWordLength);
 }
 
-Info SymSpell::WordSegmentation(const std::string &input, int maxEditDistance) {
+Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance) {
     return WordSegmentation(input, maxEditDistance, this->maxDictionaryWordLength);
 }
 
-Info SymSpell::WordSegmentation(const std::string &input, int maxEditDistance, int maxSegmentationWordLength) {
+Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength) {
     int arraySize = fmin(maxSegmentationWordLength, (int) input.size());
     std::vector<Info> compositions = std::vector<Info>(arraySize);
     int circularIndex = -1;
@@ -607,20 +607,20 @@ Info SymSpell::WordSegmentation(const std::string &input, int maxEditDistance, i
     for (int j = 0; j < input.size(); j++) {
         int imax = fmin((int) input.size() - j, maxSegmentationWordLength);
         for (int i = 1; i <= imax; i++) {
-            std::string part = input.substr(j, i);
+            xstring part = input.substr(j, i);
             int separatorLength = 0;
             int topEd = 0;
             double topProbabilityLog = 0;
-            std::string topResult;
+            xstring topResult;
 
-            if (std::isspace(part[0])) {
+            if (isxspace(part[0])) {
                 part = part.substr(1);
             } else {
                 separatorLength = 1;
             }
 
             topEd += part.size();
-            std::regex r(XL("(\\s)+"));
+            xregex r(XL("(\\s)+"));
             part = regex_replace(part, r, XL(""));
             topEd -= part.size();
 
@@ -648,8 +648,8 @@ Info SymSpell::WordSegmentation(const std::string &input, int maxEditDistance, i
      compositions[circularIndex].getProbability() + topProbabilityLog))
                        || (compositions[circularIndex].getDistance() + separatorLength + topEd <
                            compositions[destinationIndex].getDistance())) {
-                std::string seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
-                std::string correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
+                xstring seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
+                xstring correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
                 int d = compositions[circularIndex].getDistance() + separatorLength + topEd;
                 double prob = compositions[circularIndex].getProbability() + topProbabilityLog;
                 compositions[destinationIndex].set(seg, correct, d, prob);

@@ -8,6 +8,7 @@
 
 #include "DamerauOSA.h"
 #include "Levenshtein.h"
+#include "Defines.h"
 #include "memory"
 
 enum DistanceAlgorithm {
@@ -17,7 +18,7 @@ enum DistanceAlgorithm {
 
 class EditDistance {
 private:
-    BaseDistance* distanceComparer;
+    BaseDistance *distanceComparer;
     DamerauOSA damerauOSADistance;
     Levenshtein levenshteinDistance;
 
@@ -35,7 +36,7 @@ public:
         }
     }
 
-    int Compare(std::string string1, std::string string2, int maxDistance) {
+    int Compare(xstring string1, xstring string2, int maxDistance) {
         return (int) this->distanceComparer->Distance(std::move(string1), std::move(string2), maxDistance);
     }
 };

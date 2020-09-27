@@ -7,6 +7,7 @@
 #include "BaseDistance.h"
 #include "BaseSimilarity.h"
 #include "Helpers.h"
+#include "Defines.h"
 #include <vector>
 #include <cmath>
 #include <climits>
@@ -25,12 +26,12 @@ public:
         baseChar1Costs = std::vector<int>(expectedMaxstringLength, 0);
     }
 
-    double Distance(std::string string1, std::string string2) override {
+    double Distance(xstring string1, xstring string2) override {
         if (string1.empty()) return string2.size();
         if (string2.empty()) return string1.size();
 
         if (string1.size() > string2.size()) {
-            std::string t = string1;
+            xstring t = string1;
             string1 = string2;
             string2 = t;
         }
@@ -44,14 +45,14 @@ public:
                                                                                                               0)));
     }
 
-    double Distance(std::string string1, std::string string2, double maxDistance) override {
+    double Distance(xstring string1, xstring string2, double maxDistance) override {
         if (string1.empty() || string2.empty()) return Helpers::NullDistanceResults(string1, string2, maxDistance);
         if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
         maxDistance = ceil(maxDistance);
         int iMaxDistance = (maxDistance <= INT_MAX) ? (int) maxDistance : INT_MAX;
 
         if (string1.size() > string2.size()) {
-            std::string t = string1;
+            xstring t = string1;
             string1 = string2;
             string2 = t;
         }
@@ -71,12 +72,12 @@ public:
                                                                                                               0)));
     }
 
-    double Similarity(std::string string1, std::string string2) override {
+    double Similarity(xstring string1, xstring string2) override {
         if (string1.empty()) return (string2.empty()) ? 1 : 0;
         if (string2.empty()) return 0;
 
         if (string1.size() > string2.size()) {
-            std::string t = string1;
+            xstring t = string1;
             string1 = string2;
             string2 = t;
         }
@@ -92,13 +93,13 @@ public:
                                      string2.size());
     }
 
-    double Similarity(std::string string1, std::string string2, double minSimilarity) override {
+    double Similarity(xstring string1, xstring string2, double minSimilarity) override {
         if (minSimilarity < 0 || minSimilarity > 1)
             throw std::invalid_argument("minSimilarity must be in range 0 to 1.0");
         if (string1.empty() || string2.empty()) return Helpers::NullSimilarityResults(string1, string2, minSimilarity);
 
         if (string1.size() > string2.size()) {
-            std::string t = string1;
+            xstring t = string1;
             string1 = string2;
             string2 = t;
         }
@@ -125,14 +126,14 @@ public:
     }
 
     static int
-    Distance(std::string string1, std::string string2, int len1, int len2, int start, std::vector<int> &char1Costs) {
+    Distance(xstring string1, xstring string2, int len1, int len2, int start, std::vector<int> &char1Costs) {
         for (int j = 0; j < len2;) char1Costs[j] = ++j;
         int currentCharCost = 0;
         if (start == 0) {
             for (int i = 0; i < len1; ++i) {
                 int leftCharCost, aboveCharCost;
                 leftCharCost = aboveCharCost = i;
-                char char1 = string1[i];
+                xchar char1 = string1[i];
                 for (int j = 0; j < len2; ++j) {
                     currentCharCost = leftCharCost; // cost on diagonal (substitution)
                     leftCharCost = char1Costs[j];
@@ -148,7 +149,7 @@ public:
             for (int i = 0; i < len1; ++i) {
                 int leftCharCost, aboveCharCost;
                 leftCharCost = aboveCharCost = i;
-                char char1 = string1[start + i];
+                xchar char1 = string1[start + i];
                 for (int j = 0; j < len2; ++j) {
                     currentCharCost = leftCharCost; // cost on diagonal (substitution)
                     leftCharCost = char1Costs[j];
@@ -164,7 +165,7 @@ public:
         return currentCharCost;
     }
 
-    static int Distance(std::string string1, std::string string2, int len1, int len2, int start, int maxDistance,
+    static int Distance(xstring string1, xstring string2, int len1, int len2, int start, int maxDistance,
                         std::vector<int> &char1Costs) {
         int i, j;
         for (j = 0; j < maxDistance;) char1Costs[j] = ++j;
@@ -176,7 +177,7 @@ public:
         int currentCost = 0;
         if (start == 0) {
             for (i = 0; i < len1; ++i) {
-                char char1 = string1[i];
+                xchar char1 = string1[i];
                 int prevChar1Cost, aboveCharCost;
                 prevChar1Cost = aboveCharCost = i;
                 jStart += (i > jStartOffset) ? 1 : 0;
@@ -195,7 +196,7 @@ public:
             }
         } else {
             for (i = 0; i < len1; ++i) {
-                char char1 = string1[start + i];
+                xchar char1 = string1[start + i];
                 int prevChar1Cost, aboveCharCost;
                 prevChar1Cost = aboveCharCost = i;
                 jStart += (i > jStartOffset) ? 1 : 0;
