@@ -5,6 +5,14 @@ A Fast SymSpell v6.5 port for python written in C++ using pybind11.
 
 ## Installation
 ```shell script
+pip install SymSpellCppPy
+```
+
+## Usage
+[Examples](https://symspellcpppy.readthedocs.io/en/latest/Examples.html)
+
+## Development
+```shell script
 git clone git@github.com:viig99/SymSpellCppPy.git
 cd SymSpellCppPy
 mkdir -p build && cd build
