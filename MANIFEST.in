@@ -9,6 +9,8 @@ include ./tests/*.cpp
 include ./ *.cpp
 include ./ *.h
 
+exclude benchmark.py
+
 graft include
 graft tests
 graft resources
@@ -17,7 +19,6 @@ graft cmake
 prune docs
 prune cmake-build*
 prune build
-prune benchmark.py
 
 global-exclude *.py[cod]
 global-exclude *.git
