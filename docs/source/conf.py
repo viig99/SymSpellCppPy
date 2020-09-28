@@ -16,7 +16,7 @@
 import sys, os
 import sphinx_rtd_theme
 
-sys.path.append(os.path.abspath('build/lib.linux-x86_64-3.8'))
+sys.path.append(os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
@@ -29,6 +29,8 @@ version = '0.0.1'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
+
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
