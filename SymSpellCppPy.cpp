@@ -9,16 +9,23 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(SymSpellCppPy, m) {
-    m.doc() = "Pybind11 binding for SymSpellPy";
+    m.doc() = R"pbdoc(
+        Pybind11 binding for SymSpellPy
+        ---------------------------
+        .. currentmodule:: SymSpellCppPy
+        .. autosummary::
+           :toctree: _generate
+           symspell
+    )pbdoc";
 
     py::class_<symspellcpppy::Info>(m, "Info")
             .def(py::init<>())
-            .def("set", &symspellcpppy::Info::set, "Set Info properties", py::arg("seg"), py::arg("cor"),
-                 py::arg("dist"), py::arg("prob"))
-            .def("getSegmented", &symspellcpppy::Info::getSegmented)
-            .def("getCorrected", &symspellcpppy::Info::getCorrected)
-            .def("getDistance", &symspellcpppy::Info::getDistance)
-            .def("getProbability", &symspellcpppy::Info::getProbability)
+            .def("set", &symspellcpppy::Info::set, "Set Info properties", py::arg("segmented_string"), py::arg("corrected_string"),
+                 py::arg("distance_sum"), py::arg("log_prob_sum"))
+            .def("get_segmented", &symspellcpppy::Info::getSegmented)
+            .def("get_corrected", &symspellcpppy::Info::getCorrected)
+            .def("get_distance", &symspellcpppy::Info::getDistance)
+            .def("get_probability", &symspellcpppy::Info::getProbability)
             .def("__repr__",
                  [](const symspellcpppy::Info &a) {
                      return "<Info corrected string ='" + a.getCorrected() + "'>";
@@ -33,73 +40,73 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
 
     py::class_<symspellcpppy::SymSpell>(m, "SymSpell")
             .def(py::init<int, int, int, int, unsigned char>(), "SymSpell builder options",
-                 py::arg("initialCapacity") = DEFAULT_INITIAL_CAPACITY,
-                 py::arg("maxDictionaryEditDistance") = DEFAULT_MAX_EDIT_DISTANCE,
-                 py::arg("prefixLength") = DEFAULT_PREFIX_LENGTH,
-                 py::arg("countThreshold") = DEFAULT_COUNT_THRESHOLD,
-                 py::arg("compactLevel") = DEFAULT_COMPACT_LEVEL
+                 py::arg("initial_capacity") = DEFAULT_INITIAL_CAPACITY,
+                 py::arg("max_dictionary_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
+                 py::arg("prefix_length") = DEFAULT_PREFIX_LENGTH,
+                 py::arg("count_threshold") = DEFAULT_COUNT_THRESHOLD,
+                 py::arg("compact_level") = DEFAULT_COMPACT_LEVEL
             )
-            .def("LoadBigramDictionary", py::overload_cast<const std::string &, int, int, xchar>(
+            .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(
                     &symspellcpppy::SymSpell::LoadBigramDictionary),
-                 "Load the bigram dictionary",
+                 "Load the bi-gram dictionary",
                  py::arg("corpus"),
-                 py::arg("termIndex"),
-                 py::arg("countIndex"),
-                 py::arg("separatorChars") = DEFAULT_SEPARATOR_CHAR)
-            .def("LoadDictionary", py::overload_cast<const std::string &, int, int, xchar>(
+                 py::arg("term_index"),
+                 py::arg("count_index"),
+                 py::arg("sep") = DEFAULT_SEPARATOR_CHAR)
+            .def("load_dictionary", py::overload_cast<const std::string &, int, int, xchar>(
                     &symspellcpppy::SymSpell::LoadDictionary),
                  "Load the dictionary",
                  py::arg("corpus"),
-                 py::arg("termIndex"),
-                 py::arg("countIndex"),
-                 py::arg("separatorChars") = DEFAULT_SEPARATOR_CHAR)
-            .def("CreateDictionary", py::overload_cast<const std::string &>(
+                 py::arg("term_index"),
+                 py::arg("count_index"),
+                 py::arg("sep") = DEFAULT_SEPARATOR_CHAR)
+            .def("create_dictionary", py::overload_cast<const std::string &>(
                     &symspellcpppy::SymSpell::CreateDictionary),
                  "create dictionary",
                  py::arg("corpus"))
-            .def("PurgeBelowThresholdWords", &symspellcpppy::SymSpell::PurgeBelowThresholdWords,
+            .def("purge_below_threshold_words", &symspellcpppy::SymSpell::PurgeBelowThresholdWords,
                  "purge below threshold words")
-            .def("LookupTerm", py::overload_cast<xstring, symspellcpppy::Verbosity>(
+            .def("lookup_term", py::overload_cast<xstring, symspellcpppy::Verbosity>(
                     &symspellcpppy::SymSpell::LookupTerm),
                  "lookup word in dictionary",
                  py::arg("input"),
                  py::arg("verbosity"))
-            .def("LookupTerm", py::overload_cast<xstring, symspellcpppy::Verbosity, int>(
+            .def("lookup_term", py::overload_cast<xstring, symspellcpppy::Verbosity, int>(
                     &symspellcpppy::SymSpell::LookupTerm),
                  "lookup word in dictionary",
                  py::arg("input"),
                  py::arg("verbosity"),
-                 py::arg("maxEditDistance"))
-            .def("LookupTerm", py::overload_cast<xstring, symspellcpppy::Verbosity, int, bool>(
+                 py::arg("max_edit_distance"))
+            .def("lookup_term", py::overload_cast<xstring, symspellcpppy::Verbosity, int, bool>(
                     &symspellcpppy::SymSpell::LookupTerm),
                  "lookup word in dictionary",
                  py::arg("input"),
                  py::arg("verbosity"),
-                 py::arg("maxEditDistance"),
-                 py::arg("includeUnknown"))
-            .def("LookupCompoundTerm", py::overload_cast<const xstring&, int>(
+                 py::arg("max_edit_distance"),
+                 py::arg("include_unknown"))
+            .def("lookup_compound_term", py::overload_cast<const xstring&, int>(
                     &symspellcpppy::SymSpell::LookupCompoundTerm),
                  "lookup compound words from the dictionary",
                  py::arg("input"),
-                 py::arg("editDistanceMax"))
-            .def("LookupCompoundTerm", py::overload_cast<const xstring&>(
+                 py::arg("max_edit_distance"))
+            .def("lookup_compound_term", py::overload_cast<const xstring&>(
                     &symspellcpppy::SymSpell::LookupCompoundTerm),
                  "lookup compound words from the dictionary",
                  py::arg("input"))
-            .def("WordSegmentation", py::overload_cast<const xstring&>(
+            .def("word_segmentation", py::overload_cast<const xstring&>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  "insert spaces in between words in a sentence",
                  py::arg("input"))
-            .def("WordSegmentation", py::overload_cast<const xstring&, int>(
+            .def("word_segmentation", py::overload_cast<const xstring&, int>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  "insert spaces in between words in a sentence",
                  py::arg("input"),
-                 py::arg("maxEditDistance"))
-            .def("WordSegmentation", py::overload_cast<const xstring&, int, int>(
+                 py::arg("max_edit_distance"))
+            .def("word_segmentation", py::overload_cast<const xstring&, int, int>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  "insert spaces in between words in a sentence",
                  py::arg("input"),
-                 py::arg("maxEditDistance"),
-                 py::arg("maxSegmentationWordLength"));
+                 py::arg("max_edit_distance"),
+                 py::arg("max_seg_word_length"));
 
 }
