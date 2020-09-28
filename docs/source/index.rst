@@ -45,8 +45,7 @@ To fix word segmentation issues in a sentence use::
 
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Contents:
+   :maxdepth: 2
 
 
 Indices and tables
