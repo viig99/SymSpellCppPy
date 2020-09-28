@@ -14,6 +14,10 @@ graft tests
 graft resources
 graft cmake
 
+prune docs
+prune cmake-build*
+prune build
+
 global-exclude *.py[cod]
 global-exclude *.git
 global-exclude *.js
@@ -21,5 +25,4 @@ global-exclude *.html
 global-exclude *.png
 global-exclude *.dox
 global-exclude __pycache__
-global-exclude docs
 
