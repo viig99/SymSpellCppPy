@@ -1,5 +1,5 @@
-SymSpellCppPy module
-====================
+SymSpellCppPy
+==============
 
 .. automodule:: SymSpellCppPy
    :members:

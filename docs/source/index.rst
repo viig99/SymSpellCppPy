@@ -6,7 +6,7 @@ SymSpellCppPy Docs
    :caption: Modules:
 
    Examples
-   modules
+   SymSpellCppPy
 
 Indices and tables
 ==================
