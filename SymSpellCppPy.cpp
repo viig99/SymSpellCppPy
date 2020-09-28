@@ -11,7 +11,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(SymSpellCppPy, m) {
     m.doc() = R"pbdoc(
         Pybind11 binding for SymSpellPy
-        ---------------------------
+        -------------------------------
         .. currentmodule:: SymSpellCppPy
         .. autosummary::
            :toctree: _generate
