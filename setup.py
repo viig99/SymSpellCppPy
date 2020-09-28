@@ -89,9 +89,21 @@ setup(
     test_suite='setup.find_test_suite',
     ext_modules=[CMakeExtension('SymSpellCppPy')],
     cmdclass=dict(build_ext=CMakeBuild),
+    python_requires=">=3.4",
     zip_safe=False,
     url="https://github.com/viig99/SymSpellCppPy",
     classifiers=[
-        'License :: OSI Approved :: MIT License',
+        "Intended Audience :: Developers",
+        "Natural Language :: English",
+        "Development Status :: 2 - Pre-Alpha",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9"
     ]
 )
