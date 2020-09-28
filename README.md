@@ -11,6 +11,13 @@ pip install SymSpellCppPy
 ## Usage
 [Examples](https://symspellcpppy.readthedocs.io/en/latest/Examples.html)
 
+## Benchmark Results
+```shell script
+pip install pytest pytest-benchmark symspellpy SymSpellCppPy
+pytest benchmark.py --benchmark-compare
+```
+![Benchmark Results](https://github.com/viig99/SymSpellCppPy/blob/master/resources/benchmark.png?raw=true)
+
 ## Development
 ```shell script
 git clone git@github.com:viig99/SymSpellCppPy.git
