@@ -14,6 +14,11 @@ def find_test_suite():
     test_suite = test_loader.discover('tests', pattern='*.py')
     return test_suite
 
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
@@ -79,7 +84,8 @@ setup(
     author='Arjun Variar & Mohit Tare',
     author_email='accio.arjun@gmail.com',
     description='A Fast SymSpell port for python written in C++ using pybind11.',
-    long_description='',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     test_suite='setup.find_test_suite',
     ext_modules=[CMakeExtension('SymSpellCppPy')],
     cmdclass=dict(build_ext=CMakeBuild),
