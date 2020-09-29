@@ -20,17 +20,44 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
 
     py::class_<symspellcpppy::Info>(m, "Info")
             .def(py::init<>())
-            .def("set", &symspellcpppy::Info::set, "Set Info properties", py::arg("segmented_string"), py::arg("corrected_string"),
+            .def("set", &symspellcpppy::Info::set, "Set Info properties", py::arg("segmented_string"),
+                 py::arg("corrected_string"),
                  py::arg("distance_sum"), py::arg("log_prob_sum"))
             .def("get_segmented", &symspellcpppy::Info::getSegmented)
             .def("get_corrected", &symspellcpppy::Info::getCorrected)
             .def("get_distance", &symspellcpppy::Info::getDistance)
             .def("get_probability", &symspellcpppy::Info::getProbability)
+            .def_property_readonly("segmented_string", &symspellcpppy::Info::getSegmented)
+            .def_property_readonly("corrected_string", &symspellcpppy::Info::getCorrected)
+            .def_property_readonly("distance_sum", &symspellcpppy::Info::getDistance)
+            .def_property_readonly("log_prob_sum", &symspellcpppy::Info::getProbability)
             .def("__repr__",
                  [](const symspellcpppy::Info &a) {
                      return "<Info corrected string ='" + a.getCorrected() + "'>";
                  }
             );
+
+    py::class_<SuggestItem>(m, "SuggestItem")
+            .def(py::init<xstring, int, int64_t>())
+            .def("__eq__", [](const SuggestItem &a, const SuggestItem &b) {
+                return a.Equals(b);
+            })
+            .def("__lt__", [](const SuggestItem &a, const SuggestItem &b) {
+                return SuggestItem::compare(a, b);
+            })
+            .def("__repr__",
+                 [](const SuggestItem &a) {
+                     return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
+                 }
+            )
+            .def("__str__",
+                 [](const SuggestItem &a) {
+                     return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
+                 }
+            )
+            .def_readwrite("term", &SuggestItem::term)
+            .def_readwrite("distance", &SuggestItem::distance)
+            .def_readwrite("count", &SuggestItem::count);
 
     py::enum_<symspellcpppy::Verbosity>(m, "Verbosity")
             .value("TOP", symspellcpppy::Verbosity::Top, "Get the top-k matches")
@@ -66,43 +93,43 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("corpus"))
             .def("purge_below_threshold_words", &symspellcpppy::SymSpell::PurgeBelowThresholdWords,
                  "purge below threshold words")
-            .def("lookup_term", py::overload_cast<xstring, symspellcpppy::Verbosity>(
-                    &symspellcpppy::SymSpell::LookupTerm),
+            .def("lookup", py::overload_cast<xstring, symspellcpppy::Verbosity>(
+                    &symspellcpppy::SymSpell::Lookup),
                  "lookup word in dictionary",
                  py::arg("input"),
                  py::arg("verbosity"))
-            .def("lookup_term", py::overload_cast<xstring, symspellcpppy::Verbosity, int>(
-                    &symspellcpppy::SymSpell::LookupTerm),
+            .def("lookup", py::overload_cast<xstring, symspellcpppy::Verbosity, int>(
+                    &symspellcpppy::SymSpell::Lookup),
                  "lookup word in dictionary",
                  py::arg("input"),
                  py::arg("verbosity"),
                  py::arg("max_edit_distance"))
-            .def("lookup_term", py::overload_cast<xstring, symspellcpppy::Verbosity, int, bool>(
-                    &symspellcpppy::SymSpell::LookupTerm),
+            .def("lookup", py::overload_cast<xstring, symspellcpppy::Verbosity, int, bool>(
+                    &symspellcpppy::SymSpell::Lookup),
                  "lookup word in dictionary",
                  py::arg("input"),
                  py::arg("verbosity"),
                  py::arg("max_edit_distance"),
                  py::arg("include_unknown"))
-            .def("lookup_compound_term", py::overload_cast<const xstring&, int>(
-                    &symspellcpppy::SymSpell::LookupCompoundTerm),
+            .def("lookup_compound", py::overload_cast<const xstring &, int>(
+                    &symspellcpppy::SymSpell::LookupCompound),
                  "lookup compound words from the dictionary",
                  py::arg("input"),
                  py::arg("max_edit_distance"))
-            .def("lookup_compound_term", py::overload_cast<const xstring&>(
-                    &symspellcpppy::SymSpell::LookupCompoundTerm),
+            .def("lookup_compound", py::overload_cast<const xstring &>(
+                    &symspellcpppy::SymSpell::LookupCompound),
                  "lookup compound words from the dictionary",
                  py::arg("input"))
-            .def("word_segmentation", py::overload_cast<const xstring&>(
+            .def("word_segmentation", py::overload_cast<const xstring &>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  "insert spaces in between words in a sentence",
                  py::arg("input"))
-            .def("word_segmentation", py::overload_cast<const xstring&, int>(
+            .def("word_segmentation", py::overload_cast<const xstring &, int>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  "insert spaces in between words in a sentence",
                  py::arg("input"),
                  py::arg("max_edit_distance"))
-            .def("word_segmentation", py::overload_cast<const xstring&, int, int>(
+            .def("word_segmentation", py::overload_cast<const xstring &, int, int>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  "insert spaces in between words in a sentence",
                  py::arg("input"),

@@ -178,38 +178,31 @@ namespace symspellcpppy {
 
         void CommitStaged(SuggestionStage *staging);
 
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity);
-
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance);
-
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
-
         /// <summary>Find suggested spellings for a given input word, using the maximum
         /// edit distance specified during construction of the SymSpell dictionary.</summary>
         /// <param name="input">The word being spell checked.</param>
         /// <param name="verbosity">The value controlling the quantity/closeness of the retuned suggestions.</param>
-        /// <returns>A List of Strings representing suggested correct spellings for the input word,
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<xstring> LookupTerm(xstring input, Verbosity verbosity);
+        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity);
 
         /// <summary>Find suggested spellings for a given input word, using the maximum
         /// edit distance specified during construction of the SymSpell dictionary.</summary>
         /// <param name="input">The word being spell checked.</param>
         /// <param name="verbosity">The value controlling the quantity/closeness of the retuned suggestions.</param>
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
-        /// <returns>A List of Strings representing suggested correct spellings for the input word,
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<xstring> LookupTerm(xstring input, Verbosity verbosity, int maxEditDistance);
+        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance);
 
-        /// <summary>Find suggested spellings for a given input word, using the maximum
-        /// edit distance specified during construction of the SymSpell dictionary.</summary>
+        /// <summary>Find suggested spellings for a given input word.</summary>
         /// <param name="input">The word being spell checked.</param>
         /// <param name="verbosity">The value controlling the quantity/closeness of the retuned suggestions.</param>
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
         /// <param name="includeUnknown">Include input word in suggestions, if no words within edit distance found.</param>
-        /// <returns>A List of Strings representing suggested correct spellings for the input word,
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<xstring> LookupTerm(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
+        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
 
     private:
         bool
@@ -227,10 +220,6 @@ namespace symspellcpppy {
     public:
         //######################
 
-        std::vector<SuggestItem> LookupCompound(const xstring &input);
-
-        std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax);
-
         //LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:
         //1. mistakenly inserted space into a correct word led to two incorrect terms
         //2. mistakenly omitted space between two correct words led to one incorrect combined term
@@ -238,14 +227,14 @@ namespace symspellcpppy {
 
         /// <summary>Find suggested spellings for a multi-word input string (supports word splitting/merging).</summary>
         /// <param name="input">The string being spell checked.</param>
-        /// <returns>A List of strings representing suggested correct spellings for the input string.</returns>
-        std::vector<xstring> LookupCompoundTerm(const xstring &input);
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input string.</returns>
+        std::vector<SuggestItem> LookupCompound(const xstring &input);
 
         /// <summary>Find suggested spellings for a multi-word input string (supports word splitting/merging).</summary>
         /// <param name="input">The string being spell checked.</param>
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
-        /// <returns>A List of strings representing suggested correct spellings for the input string.</returns>
-        std::vector<xstring> LookupCompoundTerm(const xstring &input, int editDistanceMax);
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input string.</returns>
+        std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax);
 
         //######
 

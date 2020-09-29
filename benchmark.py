@@ -57,8 +57,8 @@ def test_lookup_term_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "mEmEbers"
-    result = benchmark(sym_spell.lookup_term, input_term, VerbosityCpp.CLOSEST, max_edit_distance=2)
-    assert (result[0] == "members")
+    result = benchmark(sym_spell.lookup, input_term, VerbosityCpp.CLOSEST, max_edit_distance=2)
+    assert (result[0].term == "members")
 
 
 @pytest.mark.benchmark(
@@ -85,8 +85,8 @@ def test_lookup_compound_term_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "whereis th elove"
-    result = benchmark(sym_spell.lookup_compound_term, input_term, max_edit_distance=2)
-    assert (result[0] == "whereas to love")
+    result = benchmark(sym_spell.lookup_compound, input_term, max_edit_distance=2)
+    assert (result[0].term == "whereas to love")
 
 
 @pytest.mark.benchmark(
@@ -114,4 +114,4 @@ def test_word_segmentation_symspellcpppy(benchmark):
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "thequickbrownfoxjumpsoverthelazydog"
     result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
-    assert (result.get_segmented() == "t he quick brown fox jumps overt he lazy dog")
+    assert (result.segmented_string == "t he quick brown fox jumps overt he lazy dog")
