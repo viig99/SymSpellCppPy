@@ -16,11 +16,11 @@ To lookup and find the correct spelling for a term from the dictonary use::
 To lookup and find the correct spelling for a term from the dictonary within a certain edit-distance use::
 
 
-    terms = symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.Closest, max_edit_distance=2)
+    terms = symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.CLOSEST, max_edit_distance=2)
     print(terms[0])
     >> "extreme"
 
-    terms = symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.Closest, max_edit_distance=1)
+    terms = symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.CLOSEST, max_edit_distance=1)
     print(terms)
     >> []
 
