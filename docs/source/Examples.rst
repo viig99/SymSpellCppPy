@@ -5,11 +5,11 @@ To load the dictionary use::
 
     import SymSpellCppPy
     symSpell = SymSpellCppPy.SymSpell()
-    symSpell.load_dictionary(corpus="resources/frequency_dictionary_en_82_765.txt", term_index=0, count_index=1, sep=" ")
+    symSpell.load_dictionary(corpus="resources/frequency_dictionary_en_82_765.txt", term_index=0, count_index=1, separator=" ")
 
 To lookup and find the correct spelling for a term from the dictonary use::
 
-    terms = symSpell.lookup_term("tke", SymSpellCppPy.Verbosity.Closest)
+    terms = symSpell.lookup_term("tke", SymSpellCppPy.Verbosity.CLOSEST)
     print(terms[0])
     >> "take"
 

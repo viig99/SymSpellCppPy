@@ -146,7 +146,7 @@ namespace symspellcpppy {
                     count = stoll(lineParts[countIndex]);
 
                 } catch (...) {
-                    printf("Cannot convert %ls to integer\n", lineParts[countIndex].c_str());
+                    printf("Cannot convert %s to integer\n", lineParts[countIndex].c_str());
                 }
             } else {
                 key = line;
@@ -309,7 +309,7 @@ namespace symspellcpppy {
                             || (suggestionLen == candidateLen && suggestion !=
                                                                  candidate)) // if sugg len = delete len, then it either equals delete or is in same bin only because of hash collision
                             continue;
-                        auto suggPrefixLen = fmin(suggestionLen, prefixLength);
+                        auto suggPrefixLen = std::min(suggestionLen, prefixLength);
                         if (suggPrefixLen > inputPrefixLen &&
                             (suggPrefixLen - candidateLen) > maxEditDistance2)
                             continue;
@@ -318,7 +318,7 @@ namespace symspellcpppy {
                         int min_len = 0;
                         if (candidateLen == 0) {
                             //suggestions which have no common chars with input (inputLen<=maxEditDistance && suggestionLen<=maxEditDistance)
-                            distance = fmax(inputLen, suggestionLen);
+                            distance = std::max(inputLen, suggestionLen);
                             auto flag = hashset2.insert(suggestion);
                             if (distance > maxEditDistance2 || !flag.second) continue;
                         } else if (suggestionLen == 1) {
@@ -330,7 +330,7 @@ namespace symspellcpppy {
                             auto flag = hashset2.insert(suggestion);
                             if (distance > maxEditDistance2 || !flag.second) continue;
                         } else if ((prefixLength - maxEditDistance == candidateLen)
-                                   && (((min_len = fmin(inputLen, suggestionLen) - prefixLength) > 1)
+                                   && (((min_len = std::min(inputLen, suggestionLen) - prefixLength) > 1)
                                        && (input.substr(inputLen + 1 - min_len) !=
                                            suggestion.substr(suggestionLen + 1 - min_len)))
                                    ||
@@ -566,22 +566,22 @@ namespace symspellcpppy {
                                     suggestionSplit.count = bigramCount;
                                     if (!suggestions.empty()) {
                                         if ((suggestions1[0].term + suggestions2[0].term == termList1[i])) {
-                                            suggestionSplit.count = fmax(suggestionSplit.count,
+                                            suggestionSplit.count = std::max(suggestionSplit.count,
                                                                          suggestions[0].count + 2);
                                         } else if ((suggestions1[0].term == suggestions[0].term) ||
                                                    (suggestions2[0].term == suggestions[0].term)) {
-                                            suggestionSplit.count = fmax(suggestionSplit.count,
+                                            suggestionSplit.count = std::max(suggestionSplit.count,
                                                                          suggestions[0].count + 1);
                                         }
                                     } else if ((suggestions1[0].term + suggestions2[0].term == termList1[i])) {
-                                        suggestionSplit.count = fmax(suggestionSplit.count,
-                                                                     fmax(suggestions1[0].count,
+                                        suggestionSplit.count = std::max(suggestionSplit.count,
+                                                                     std::max(suggestions1[0].count,
                                                                           suggestions2[0].count) +
                                                                      2);
                                     }
 
                                 } else {
-                                    suggestionSplit.count = fmin(bigramCountMin,
+                                    suggestionSplit.count = std::min(bigramCountMin,
                                                                  (int64_t) ((double) suggestions1[0].count /
                                                                             (double) N *
                                                                             (double) suggestions2[0].count));
@@ -658,12 +658,12 @@ namespace symspellcpppy {
     }
 
     Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength) {
-        int arraySize = fmin(maxSegmentationWordLength, (int) input.size());
+        int arraySize = std::min(maxSegmentationWordLength, (int) input.size());
         std::vector<Info> compositions = std::vector<Info>(arraySize);
         int circularIndex = -1;
 
         for (int j = 0; j < input.size(); j++) {
-            int imax = fmin((int) input.size() - j, maxSegmentationWordLength);
+            int imax = std::min((int) input.size() - j, maxSegmentationWordLength);
             for (int i = 1; i <= imax; i++) {
                 xstring part = input.substr(j, i);
                 int separatorLength = 0;

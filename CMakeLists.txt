@@ -24,7 +24,7 @@ if (BUILD_FOR_PYTHON)
     set_target_properties(SymSpellCppPy PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}"
             SUFFIX "${PYTHON_MODULE_EXTENSION}")
     target_compile_options(SymSpellCppPy PRIVATE
-            $<$<CONFIG:Release>:-O2 -DNDEBUG -march=native -mtune=native -fvisibility=hidden -flto>)
+            $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -mtune=native -fvisibility=hidden -flto>)
     message(STATUS "Build for Python = " ${BUILD_FOR_PYTHON})
 else ()
     Include(FetchContent)

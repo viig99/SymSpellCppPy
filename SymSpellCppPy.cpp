@@ -33,9 +33,9 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
             );
 
     py::enum_<symspellcpppy::Verbosity>(m, "Verbosity")
-            .value("Top", symspellcpppy::Verbosity::Top, "Get the top-k matches")
-            .value("Closest", symspellcpppy::Verbosity::Closest, "Get the closest match")
-            .value("All", symspellcpppy::Verbosity::All, "Get all matches ranked on basis of edit distance.")
+            .value("TOP", symspellcpppy::Verbosity::Top, "Get the top-k matches")
+            .value("CLOSEST", symspellcpppy::Verbosity::Closest, "Get the closest match")
+            .value("ALL", symspellcpppy::Verbosity::All, "Get all matches ranked on basis of edit distance.")
             .export_values();
 
     py::class_<symspellcpppy::SymSpell>(m, "SymSpell")
@@ -52,14 +52,14 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("corpus"),
                  py::arg("term_index"),
                  py::arg("count_index"),
-                 py::arg("sep") = DEFAULT_SEPARATOR_CHAR)
+                 py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
             .def("load_dictionary", py::overload_cast<const std::string &, int, int, xchar>(
                     &symspellcpppy::SymSpell::LoadDictionary),
                  "Load the dictionary",
                  py::arg("corpus"),
                  py::arg("term_index"),
                  py::arg("count_index"),
-                 py::arg("sep") = DEFAULT_SEPARATOR_CHAR)
+                 py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
             .def("create_dictionary", py::overload_cast<const std::string &>(
                     &symspellcpppy::SymSpell::CreateDictionary),
                  "create dictionary",
@@ -107,6 +107,6 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  "insert spaces in between words in a sentence",
                  py::arg("input"),
                  py::arg("max_edit_distance"),
-                 py::arg("max_seg_word_length"));
+                 py::arg("max_segmentation_word_length"));
 
 }

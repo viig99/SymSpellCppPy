@@ -9,15 +9,15 @@ class SymSpellCppPyTests(unittest.TestCase):
         cls.symSpell.load_dictionary("resources/frequency_dictionary_en_82_765.txt", 0, 1, " ")
 
     def test_lookup(self):
-        self.assertEqual(self.symSpell.lookup_term("tke", SymSpellCppPy.Verbosity.Closest)[0], "take")
-        self.assertEqual(self.symSpell.lookup_term("abolution", SymSpellCppPy.Verbosity.Closest)[0], "abolition")
-        self.assertEqual(self.symSpell.lookup_term("intermedaite", SymSpellCppPy.Verbosity.Closest)[0], "intermediate")
+        self.assertEqual(self.symSpell.lookup_term("tke", SymSpellCppPy.Verbosity.CLOSEST)[0], "take")
+        self.assertEqual(self.symSpell.lookup_term("abolution", SymSpellCppPy.Verbosity.CLOSEST)[0], "abolition")
+        self.assertEqual(self.symSpell.lookup_term("intermedaite", SymSpellCppPy.Verbosity.CLOSEST)[0], "intermediate")
 
     def test_lookup_distance(self):
-        self.assertEqual(self.symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.Closest, 2)[0], "extreme")
-        self.assertListEqual(self.symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.Closest, 1), [])
-        self.assertListEqual(self.symSpell.lookup_term("elipnaht", SymSpellCppPy.Verbosity.Closest), [])
-        self.assertListEqual(self.symSpell.lookup_term("aotocrasie", SymSpellCppPy.Verbosity.Closest), [])
+        self.assertEqual(self.symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.CLOSEST, 2)[0], "extreme")
+        self.assertListEqual(self.symSpell.lookup_term("extrine", SymSpellCppPy.Verbosity.CLOSEST, 1), [])
+        self.assertListEqual(self.symSpell.lookup_term("elipnaht", SymSpellCppPy.Verbosity.CLOSEST), [])
+        self.assertListEqual(self.symSpell.lookup_term("aotocrasie", SymSpellCppPy.Verbosity.CLOSEST), [])
 
     def test_compound_mistakes(self):
         self.assertEqual(self.symSpell.lookup_compound_term(

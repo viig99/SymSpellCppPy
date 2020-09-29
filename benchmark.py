@@ -1,10 +1,10 @@
-'''
+"""
     To Check install
     pip install pytest pytest-benchmark symspellpy SymSpellCppPy
     pytest benchmark.py
-'''
+"""
 
-from symspellpy import SymSpell, Verbosity
+from symspellpy import SymSpell as SymSpellPy, Verbosity as VerbosityPy
 from SymSpellCppPy import SymSpell as SymSpellCpp, Verbosity as VerbosityCpp
 import pytest
 
@@ -18,7 +18,7 @@ dict_path = "resources/frequency_dictionary_en_82_765.txt"
     warmup=False
 )
 def test_load_dict_symspellpy(benchmark):
-    sym_spell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
     benchmark(sym_spell.load_dictionary, dict_path, term_index=0, count_index=1, separator=" ")
 
 
@@ -29,8 +29,8 @@ def test_load_dict_symspellpy(benchmark):
     warmup=False
 )
 def test_load_dict_symspellcpppy(benchmark):
-    symSpell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(symSpell.load_dictionary, dict_path, term_index=0, count_index=1, sep=" ")
+    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
+    benchmark(sym_spell.load_dictionary, dict_path, term_index=0, count_index=1, separator=" ")
 
 
 @pytest.mark.benchmark(
@@ -40,10 +40,10 @@ def test_load_dict_symspellcpppy(benchmark):
     warmup=False
 )
 def test_lookup_term_symspellpy(benchmark):
-    sym_spell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "mEmEbers"
-    result = benchmark(sym_spell.lookup, input_term, Verbosity.CLOSEST, max_edit_distance=2, transfer_casing=True)
+    result = benchmark(sym_spell.lookup, input_term, VerbosityPy.CLOSEST, max_edit_distance=2, transfer_casing=True)
     assert (result[0].term.lower() == "members")
 
 
@@ -55,9 +55,9 @@ def test_lookup_term_symspellpy(benchmark):
 )
 def test_lookup_term_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, sep=" ")
+    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "mEmEbers"
-    result = benchmark(sym_spell.lookup_term, input_term, VerbosityCpp.Closest, max_edit_distance=2)
+    result = benchmark(sym_spell.lookup_term, input_term, VerbosityCpp.CLOSEST, max_edit_distance=2)
     assert (result[0] == "members")
 
 
@@ -68,7 +68,7 @@ def test_lookup_term_symspellcpppy(benchmark):
     warmup=False
 )
 def test_lookup_compound_term_symspellpy(benchmark):
-    sym_spell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "whereis th elove"
     result = benchmark(sym_spell.lookup_compound, input_term, max_edit_distance=2)
@@ -83,7 +83,7 @@ def test_lookup_compound_term_symspellpy(benchmark):
 )
 def test_lookup_compound_term_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, sep=" ")
+    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "whereis th elove"
     result = benchmark(sym_spell.lookup_compound_term, input_term, max_edit_distance=2)
     assert (result[0] == "whereas to love")
@@ -96,7 +96,7 @@ def test_lookup_compound_term_symspellcpppy(benchmark):
     warmup=False
 )
 def test_word_segmentation_symspellpy(benchmark):
-    sym_spell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "thequickbrownfoxjumpsoverthelazydog"
     result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
@@ -111,7 +111,7 @@ def test_word_segmentation_symspellpy(benchmark):
 )
 def test_word_segmentation_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, sep=" ")
+    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "thequickbrownfoxjumpsoverthelazydog"
-    result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_seg_word_length=5)
+    result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
     assert (result.get_segmented() == "t he quick brown fox jumps overt he lazy dog")
