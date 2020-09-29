@@ -678,7 +678,7 @@ namespace symspellcpppy {
                 }
 
                 topEd += part.size();
-                xregex r(XL("(\\s)+"));
+                xregex r(XL(" "));
                 part = regex_replace(part, r, XL(""));
                 topEd -= part.size();
 
