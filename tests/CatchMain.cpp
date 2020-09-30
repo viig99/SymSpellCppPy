@@ -14,9 +14,9 @@ TEST_CASE("Testing English", "[english]") {
         SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> sentences = {
-                {XL("thequickbrownfoxjumpsoverthelazydog"),                                                XL("they quick brown fox jumps over therapy dog")},
-                {XL("itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"),                         XL("it was bright holiday in april another clocks were striking thirteen")},
-                {XL("itwasthebestoftimesitwastheworstoftimesitwastheageofwisdomitwastheageoffoolishness"), XL("it waste best of times it waste worst of times it was thereof wisdom it was thereof foolishness")}
+                {XL("thequickbrownfoxjumpsoverthelazydog"),                                                XL("the quick brown fox jumps over the lazy dog")},
+                {XL("itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"),                         XL("it was bright holiday in april and the clocks were striking thirteen")},
+                {XL("itwasthebestoftimesitwastheworstoftimesitwastheageofwisdomitwastheageoffoolishness"), XL("iowa the best of times it waste worst of times it was thereof wisdom it was thereof foolishness")}
         };
 
         for (auto &sentence : sentences) {
@@ -29,7 +29,7 @@ TEST_CASE("Testing English", "[english]") {
         SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> words = {
-                {XL("tke"),          XL("take")},
+                {XL("tke"),          XL("the")},
                 {XL("abolution"),    XL("abolition")},
                 {XL("intermedaite"), XL("intermediate")}
         };
@@ -44,7 +44,7 @@ TEST_CASE("Testing English", "[english]") {
         SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> words_within_distance = {
-                {XL("tke"),     XL("take")},
+                {XL("tke"),     XL("the")},
                 {XL("extrine"), XL("extreme")}
         };
 
@@ -68,9 +68,9 @@ TEST_CASE("Testing English", "[english]") {
         SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> compunded_sentences = {
-                {XL("whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him"), XL("whereas to love head dated for much of theist who couldn't read in sixth grade and inspired him")},
-                {XL("in te dhird qarter oflast jear he hadlearned ofca sekretplan"),                                      XL("in to third quarter of last year he had learned of a secret plan")},
-                {XL("the bigjest playrs in te strogsommer film slatew ith plety of funn"),                                XL("they biggest players in to strong summer film slate with plenty of fun")}
+                {XL("whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him"), XL("whereas the love head dated for much of the past who couldn't read in sixth grade and inspired him")},
+                {XL("in te dhird qarter oflast jear he hadlearned ofca sekretplan"),                                      XL("in the third quarter of last year he had learned of a secret plan")},
+                {XL("the bigjest playrs in te strogsommer film slatew ith plety of funn"),                                XL("the biggest players in the strong summer film slate with plenty of fun")}
         };
 
         for (auto &sentence : compunded_sentences) {

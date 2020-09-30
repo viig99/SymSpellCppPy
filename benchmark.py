@@ -73,7 +73,7 @@ def test_lookup_compound_term_symspellpy(benchmark):
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "whereis th elove"
     result = benchmark(sym_spell.lookup_compound, input_term, max_edit_distance=2)
-    assert (result[0].term == "whereas to love")
+    assert (result[0].term == "whereas the love")
 
 
 @pytest.mark.benchmark(
@@ -87,7 +87,7 @@ def test_lookup_compound_term_symspellcpppy(benchmark):
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "whereis th elove"
     result = benchmark(sym_spell.lookup_compound, input_term, max_edit_distance=2)
-    assert (result[0].term == "whereas to love")
+    assert (result[0].term == "whereas the love")
 
 
 @pytest.mark.benchmark(
@@ -101,7 +101,7 @@ def test_word_segmentation_symspellpy(benchmark):
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "thequickbrownfoxjumpsoverthelazydog"
     result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
-    assert (result.segmented_string == "t he quick brown fox jumps overt he lazy dog")
+    assert (result.segmented_string == "the quick brown fox jumps over the lazy dog")
 
 
 @pytest.mark.benchmark(
@@ -115,7 +115,7 @@ def test_word_segmentation_symspellcpppy(benchmark):
     sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
     input_term = "thequickbrownfoxjumpsoverthelazydog"
     result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
-    assert (result.segmented_string == "t he quick brown fox jumps overt he lazy dog")
+    assert (result.segmented_string == "the quick brown fox jumps over the lazy dog")
 
 @pytest.mark.benchmark(
     group="save_pickle",
@@ -154,7 +154,7 @@ def test_load_pickle_symspellpy(benchmark):
     benchmark(sym_spell.load_pickle, "temp_py/temp.pk")
     os.remove("temp_py/temp.pk")
     os.rmdir("temp_py")
-    assert (sym_spell.lookup("tke", VerbosityPy.CLOSEST)[0].term == "take")
+    assert (sym_spell.lookup("tke", VerbosityPy.CLOSEST)[0].term == "the")
 
 @pytest.mark.benchmark(
     group="load_pickle",
@@ -167,4 +167,4 @@ def test_load_pickle_symspellcpppy(benchmark):
     benchmark(sym_spell.load_pickle, "temp_cpppy/temp.bin")
     os.remove("temp_cpppy/temp.bin")
     os.rmdir("temp_cpppy")
-    assert (sym_spell.lookup("tke", VerbosityCpp.CLOSEST)[0].term == "take")
+    assert (sym_spell.lookup("tke", VerbosityCpp.CLOSEST)[0].term == "the")
