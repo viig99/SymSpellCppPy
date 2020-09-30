@@ -9,6 +9,7 @@ set(CMAKE_BUILD_TYPE "Release")
 option(BUILD_FOR_PYTHON "Build for Python" OFF)
 
 add_library(SymSpellCpp SHARED library.cpp library.h)
+target_include_directories(SymSpellCpp PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 if (BUILD_FOR_PYTHON)
     Include(FetchContent)
@@ -36,6 +37,6 @@ else ()
     FetchContent_MakeAvailable(Catch2)
 
     add_executable(Catch2Test tests/CatchMain.cpp library.cpp library.h)
-    target_include_directories(Catch2Test PRIVATE tests)
+    target_include_directories(Catch2Test PUBLIC tests ${CMAKE_SOURCE_DIR}/include)
     target_link_libraries(Catch2Test Catch2::Catch2)
 endif ()

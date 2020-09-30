@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 #include <utility>
+#include <sys/stat.h>
 #include "iostream"
 #include "Defines.h"
 
@@ -53,6 +54,11 @@ public:
             return 1;
         else
             return -1;
+    }
+
+    static bool file_exists (const std::string& name) {
+        struct stat buffer;
+        return (stat (name.c_str(), &buffer) == 0);
     }
 };
 
@@ -155,7 +161,7 @@ public:
         Nodes.Add(item);
     }
 
-    void CommitTo(std::unordered_map<int, std::vector<xstring>> *permanentDeletes) {
+    void CommitTo(std::shared_ptr<std::unordered_map<int, std::vector<xstring>>> permanentDeletes) {
         auto permanentDeletesEnd = permanentDeletes->end();
         for (auto &Delete : Deletes) {
             auto permanentDeletesFinded = permanentDeletes->find(Delete.first);

@@ -96,9 +96,23 @@ TEST_CASE("Testing English", "[english]") {
 
     SECTION("check custom entry of dictionary") {
         SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
-        SuggestionStage staging(100);
-        symSpellcustom.CreateDictionaryEntry(XL("take"), 4, &staging);
+        auto staging = std::make_shared<SuggestionStage>(100);
+        symSpellcustom.CreateDictionaryEntry(XL("take"), 4, staging);
         std::vector<SuggestItem> results = symSpellcustom.Lookup(XL("take"), Verbosity::Closest, 2);
         REQUIRE(XL("take") == results[0].term);
+    }
+
+    SECTION("check save works fine.") {
+        SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
+        symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
+        auto filepath = "../resources/model.bin";
+        std::ofstream binary_path(filepath, std::ios::out | std::ios::app | std::ios::binary);
+        if (binary_path.is_open()) {
+            cereal::BinaryOutputArchive oarchive(binary_path);
+            oarchive(symSpellcustom);
+        } else {
+            throw std::invalid_argument("Cannot save to file");
+        }
+        std::remove(filepath);
     }
 }

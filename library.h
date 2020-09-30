@@ -8,9 +8,9 @@
 #define DEFAULT_INITIAL_CAPACITY 82765
 #define DEFAULT_COMPACT_LEVEL 5
 #define min3(a, b, c) (min(a, min(b, c)))
-#define MAXINT LLONG_MAX
+#define MAXINT INT_MAX
 #define M
-#define MAXLONG MAXINT
+#define MAXLONG LONG_MAX
 
 #include <fstream>
 #include <sstream>
@@ -25,6 +25,13 @@
 #include "include/Defines.h"
 #include "include/Helpers.h"
 #include "include/EditDistance.h"
+#include "cereal/types/unordered_map.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/vector.hpp"
+#include "cereal/types/memory.hpp"
+#include "cereal/archives/binary.hpp"
+#include "cereal/cereal.hpp"
+#include "fstream"
 
 // SymSpell supports compound splitting / decompounding of multi-word input strings with three cases:
 // 1. mistakenly inserted space into a correct word led to two incorrect terms
@@ -101,7 +108,7 @@ namespace symspellcpppy {
         int compactMask;
         DistanceAlgorithm distanceAlgorithm = DistanceAlgorithm::DamerauOSADistance;
         int maxDictionaryWordLength; //maximum std::unordered_map term length
-        std::unordered_map<int, std::vector<xstring>> *deletes = nullptr;
+        std::shared_ptr<std::unordered_map<int, std::vector<xstring>>> deletes;
         std::unordered_map<xstring, int64_t> words;
         std::unordered_map<xstring, int64_t> belowThresholdWords;
 
@@ -132,7 +139,7 @@ namespace symspellcpppy {
                           int prefixLength = DEFAULT_PREFIX_LENGTH, int countThreshold = DEFAULT_COUNT_THRESHOLD,
                           unsigned char compactLevel = DEFAULT_COMPACT_LEVEL);
 
-        bool CreateDictionaryEntry(const xstring &key, int64_t count, SuggestionStage *staging);
+        bool CreateDictionaryEntry(const xstring &key, int64_t count, const std::shared_ptr<SuggestionStage>& staging);
 
         std::unordered_map<xstring, long> bigrams;
         int64_t bigramCountMin = MAXLONG;
@@ -176,7 +183,7 @@ namespace symspellcpppy {
         /// a corpus using CreateDictionary.</remarks>
         void PurgeBelowThresholdWords();
 
-        void CommitStaged(SuggestionStage *staging);
+        void CommitStaged(const std::shared_ptr<SuggestionStage>& staging);
 
         /// <summary>Find suggested spellings for a given input word, using the maximum
         /// edit distance specified during construction of the SymSpell dictionary.</summary>
@@ -210,10 +217,10 @@ namespace symspellcpppy {
 
         static std::vector<xstring> ParseWords(const xstring &text);
 
-        std::unordered_set<xstring> *
-        Edits(const xstring &word, int editDistance, std::unordered_set<xstring> *deleteWords);
+        std::shared_ptr<std::unordered_set<xstring>>
+        Edits(const xstring &word, int editDistance, std::shared_ptr<std::unordered_set<xstring>> deleteWords);
 
-        std::unordered_set<xstring> EditsPrefix(xstring key);
+        std::shared_ptr<std::unordered_set<xstring>> EditsPrefix(xstring key);
 
         int GetstringHash(xstring s) const;
 
@@ -280,5 +287,12 @@ namespace symspellcpppy {
         /// the Edit distance sum between input string and corrected string,
         /// the Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).</returns>
         Info WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength);
+
+
+        template <class Archive>
+        void serialize( Archive & ar )
+        {
+            ar(deletes, words, maxDictionaryWordLength  );
+        }
     };
 }

@@ -73,6 +73,10 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("count_threshold") = DEFAULT_COUNT_THRESHOLD,
                  py::arg("compact_level") = DEFAULT_COMPACT_LEVEL
             )
+            .def("word_count", &symspellcpppy::SymSpell::WordCount, "Number of words entered.")
+            .def("max_length", &symspellcpppy::SymSpell::MaxLength, "Max length of words entered.")
+            .def("entry_count", &symspellcpppy::SymSpell::EntryCount, "Total number of deletes formed.")
+            .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold, "Count threshold.")
             .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(
                     &symspellcpppy::SymSpell::LoadBigramDictionary),
                  "Load the bi-gram dictionary",
@@ -134,6 +138,26 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  "insert spaces in between words in a sentence",
                  py::arg("input"),
                  py::arg("max_edit_distance"),
-                 py::arg("max_segmentation_word_length"));
+                 py::arg("max_segmentation_word_length"))
+            .def("save_pickle", [](symspellcpppy::SymSpell &sym, const std::string &filepath) {
+                     std::ofstream binary_path(filepath, std::ios::out | std::ios::app | std::ios::binary);
+                     if (binary_path.is_open()) {
+                         cereal::BinaryOutputArchive ar(binary_path);
+                         ar(sym);
+                     } else {
+                         throw std::invalid_argument("Cannot save to file: " + filepath);
+                     }
+                 }, "Save internal representation to file",
+                 py::arg("filepath"))
+            .def("load_pickle", [](symspellcpppy::SymSpell &sym, const std::string &filepath) {
+                     if (Helpers::file_exists(filepath)) {
+                         std::ifstream binary_path(filepath, std::ios::binary);
+                         cereal::BinaryInputArchive ar(binary_path);
+                         ar(sym);
+                     } else {
+                         throw std::invalid_argument("Unable to load file from filepath: " + filepath);
+                     }
+                 }, "Load internal representation from file",
+                 py::arg("filepath"));
 
 }

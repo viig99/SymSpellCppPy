@@ -1,5 +1,6 @@
 import unittest
 import SymSpellCppPy
+import os
 
 
 class SymSpellCppPyTests(unittest.TestCase):
@@ -42,6 +43,20 @@ class SymSpellCppPyTests(unittest.TestCase):
             "itwasthebestoftimesitwastheworstoftimesitwastheageofwisdomitwastheageoffoolishness").corrected_string,
                          "it waste best of times it waste worst of times it was thereof wisdom it was thereof "
                          "foolishness")
+
+    def test_save_load(self):
+        before_save = self.symSpell.lookup("tke", SymSpellCppPy.Verbosity.CLOSEST)[0].term
+        before_max_length = self.symSpell.max_length()
+        os.makedirs("temp", exist_ok=True)
+        self.symSpell.save_pickle("temp/temp.bin")
+        load_sym_spell = SymSpellCppPy.SymSpell()
+        load_sym_spell.load_pickle("temp/temp.bin")
+        after_load = load_sym_spell.lookup("tke", SymSpellCppPy.Verbosity.CLOSEST)[0].term
+        after_max_length = load_sym_spell.max_length()
+        os.remove("temp/temp.bin")
+        os.rmdir("temp")
+        assert(before_save == after_load)
+        assert(before_max_length == after_max_length)
 
 
 if __name__ == '__main__':

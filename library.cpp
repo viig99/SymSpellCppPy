@@ -2,6 +2,7 @@
 
 #include <codecvt>
 #include <utility>
+#include <fstream>
 
 namespace symspellcpppy {
 
@@ -48,7 +49,8 @@ namespace symspellcpppy {
         this->words = std::unordered_map<xstring, int64_t>(initialCapacity);
     }
 
-    bool SymSpell::CreateDictionaryEntry(const xstring &key, int64_t count, SuggestionStage *staging) {
+    bool SymSpell::CreateDictionaryEntry(const xstring &key, int64_t count,
+                                         const std::shared_ptr<SuggestionStage> &staging) {
 
         if (count <= 0) {
             if (this->countThreshold > 0)
@@ -82,14 +84,14 @@ namespace symspellcpppy {
         if (key.size() > this->maxDictionaryWordLength) this->maxDictionaryWordLength = key.size();
 
         //create deletes
-        std::unordered_set<xstring> edits = EditsPrefix(key);
+        auto edits = EditsPrefix(key);
         if (staging != nullptr) {
-            for (const auto &edit : edits) {
+            for (const auto &edit : *edits) {
                 staging->Add(GetstringHash(edit), key);
             }
         } else {
 
-            for (const auto &edit : edits) {
+            for (const auto &edit : *edits) {
                 int deleteHash = GetstringHash(edit);
                 auto deletesFinded = deletes->find(deleteHash);
                 std::vector<xstring> suggestions;
@@ -176,7 +178,7 @@ namespace symspellcpppy {
     }
 
     bool SymSpell::LoadDictionary(xifstream &corpusStream, int termIndex, int countIndex, xchar separatorChars) {
-        SuggestionStage staging(16384);
+        auto staging = std::make_shared<SuggestionStage>(16384);
         xstring line;
         int i = 0;
         int start, end;
@@ -191,15 +193,15 @@ namespace symspellcpppy {
             if (lineParts.size() >= 2) {
                 int64_t count = stoll(lineParts[countIndex]);
 
-                CreateDictionaryEntry(lineParts[termIndex], count, &staging);
+                CreateDictionaryEntry(lineParts[termIndex], count, staging);
             } else {
-                CreateDictionaryEntry(line, 1, &staging);
+                CreateDictionaryEntry(line, 1, staging);
             }
 
         }
         if (this->deletes == nullptr)
-            this->deletes = new std::unordered_map<int, std::vector<xstring>>(staging.DeleteCount());
-        CommitStaged(&staging);
+            this->deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
+        CommitStaged(staging);
         if (this->EntryCount() == 0)
             return false;
         return true;
@@ -219,16 +221,16 @@ namespace symspellcpppy {
 
     bool SymSpell::CreateDictionary(xifstream &corpusStream) {
         xstring line;
-        SuggestionStage staging = SuggestionStage(16384);
+        auto staging = std::make_shared<SuggestionStage>(16384);
         while (getline(corpusStream, line)) {
             for (const xstring &key : ParseWords(line)) {
-                CreateDictionaryEntry(key, 1, &staging);
+                CreateDictionaryEntry(key, 1, staging);
             }
 
         }
         if (this->deletes == nullptr)
-            this->deletes = new std::unordered_map<int, std::vector<xstring>>(staging.DeleteCount());
-        CommitStaged(&staging);
+            this->deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
+        CommitStaged(staging);
         if (this->EntryCount() == 0)
             return false;
         return true;
@@ -238,7 +240,7 @@ namespace symspellcpppy {
         belowThresholdWords.clear();
     }
 
-    void SymSpell::CommitStaged(SuggestionStage *staging) {
+    void SymSpell::CommitStaged(const std::shared_ptr<SuggestionStage> &staging) {
         staging->CommitTo(deletes);
     }
 
@@ -419,8 +421,8 @@ namespace symspellcpppy {
         return matches;
     }
 
-    std::unordered_set<xstring> *
-    SymSpell::Edits(const xstring &word, int editDistance, std::unordered_set<xstring> *deleteWords) {
+    std::shared_ptr<std::unordered_set<xstring>>
+    SymSpell::Edits(const xstring &word, int editDistance, std::shared_ptr<std::unordered_set<xstring>> deleteWords) {
         editDistance++;
         if (word.size() > 1) {
             for (int i = 0; i < word.size(); i++) {
@@ -434,12 +436,12 @@ namespace symspellcpppy {
         return deleteWords;
     }
 
-    std::unordered_set<xstring> SymSpell::EditsPrefix(xstring key) {
-        std::unordered_set<xstring> m = std::unordered_set<xstring>();
-        if (key.size() <= maxDictionaryEditDistance) m.insert(XL(""));
+    std::shared_ptr<std::unordered_set<xstring>> SymSpell::EditsPrefix(xstring key) {
+        auto m = std::make_shared<std::unordered_set<xstring>>();
+        if (key.size() <= maxDictionaryEditDistance) m->insert(XL(""));
         if (key.size() > prefixLength) key = key.substr(0, prefixLength);
-        m.insert(key);
-        Edits(key, 0, &m);
+        m->insert(key);
+        Edits(key, 0, m);
         return m;
     }
 
