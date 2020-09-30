@@ -1,0 +1,14 @@
+name: SymSpellCppPy_docs
+
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - python>=3.7
+  - sphinx_rtd_theme
+  - pybind11>=2.4.3
+  - setuptools_scm
+  - sphinx-issues
+  - cmake
+  - recommonmark

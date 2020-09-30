@@ -42,6 +42,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'sphinx.ext.intersphinx',
     'recommonmark',
     'sphinx_rtd_theme'
 ]
@@ -66,4 +67,12 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+autodoc_default_options = {
+    'members': None,
+    'imported-members': True,
+    'undoc-members': True,
+    'show-inheritance': True,
+}
+
 # -- Extension configuration -------------------------------------------------
+intersphinx_mapping = {'https://docs.python.org/': None}
