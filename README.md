@@ -8,7 +8,7 @@ A Fast SymSpell v6.5 port for python written in C++ using pybind11.
 
 ## Installation
 ```shell script
-pip install SymSpellCppPy
+pip install --upgrade SymSpellCppPy
 ```
 
 ## Documentation
