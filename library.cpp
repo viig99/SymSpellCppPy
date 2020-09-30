@@ -651,21 +651,22 @@ namespace symspellcpppy {
 
                 int destinationIndex = ((i + circularIndex) % arraySize);
 
+                auto circular_distance = compositions[circularIndex].getDistance();
+                auto destination_distance = compositions[destinationIndex].getDistance();
+                auto circular_probablity = compositions[circularIndex].getProbability();
+                auto destination_probablity = compositions[destinationIndex].getProbability();
+
                 if (j == 0) {
                     compositions[destinationIndex].set(part, topResult, topEd, topProbabilityLog);
                 } else if ((i == maxSegmentationWordLength)
-                           || (((compositions[circularIndex].getDistance() + topEd ==
-                                 compositions[destinationIndex].getDistance()) \
- || (compositions[circularIndex].getDistance() + separatorLength + topEd ==
-     compositions[destinationIndex].getDistance())) \
- && (compositions[destinationIndex].getProbability() <
-     compositions[circularIndex].getProbability() + topProbabilityLog))
-                           || (compositions[circularIndex].getDistance() + separatorLength + topEd <
-                               compositions[destinationIndex].getDistance())) {
+                           || (((circular_distance + topEd == destination_distance)
+                           || (circular_distance + separatorLength + topEd == destination_distance))
+                           && (destination_probablity < circular_probablity + topProbabilityLog))
+                           || (circular_distance + separatorLength + topEd < destination_distance)) {
                     xstring seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
                     xstring correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
-                    int d = compositions[circularIndex].getDistance() + separatorLength + topEd;
-                    double prob = compositions[circularIndex].getProbability() + topProbabilityLog;
+                    int d = circular_distance + separatorLength + topEd;
+                    double prob = circular_probablity + topProbabilityLog;
                     compositions[destinationIndex].set(seg, correct, d, prob);
                 }
             }
