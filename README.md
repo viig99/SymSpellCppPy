@@ -11,8 +11,9 @@ A Fast SymSpell v6.5 port for python written in C++ using pybind11.
 pip install SymSpellCppPy
 ```
 
-## Usage
-[Examples](https://symspellcpppy.readthedocs.io/en/latest/Examples.html)
+## Documentation
+* Check [examples](https://symspellcpppy.readthedocs.io/en/latest/Examples.html) for provided usage.
+* Check [api docs](https://symspellcpppy.readthedocs.io/en/latest/SymSpellCppPy.html#pybind11-binding-for-symspellpy) for detailed API documentation.
 
 ## Benchmark Results
 ```shell script
@@ -30,23 +31,27 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ```
 
-## Testing
-For detailed list of command line test flags please refer to [Catch 2 Docs](https://github.com/catchorg/Catch2/blob/master/docs/command-line.md#top)
-```shell script
-cd build
-./Catch2Test -s
-```
+### Testing
 
-## Python Bindings
 
-### Building
+### Python Bindings
+
+### Build
 ```shell script
 python3 setup.py build
 ```
 
-### Testing
+### Test
+#### Python tests
 ```shell script
 python3 setup.py test
+```
+
+#### C++ tests
+For detailed list of command line test flags please refer to [Catch 2 Docs](https://github.com/catchorg/Catch2/blob/master/docs/command-line.md#top)
+```shell script
+cd build
+./Catch2Test -s
 ```
 
 ## Acknowledgements
