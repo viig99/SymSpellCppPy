@@ -20,7 +20,7 @@ TEST_CASE("Testing English", "[english]") {
         };
 
         for (auto &sentence : sentences) {
-            Info results = symSpell.WordSegmentation(sentence.first);
+            auto results = symSpell.WordSegmentation(sentence.first);
             REQUIRE(results.getCorrected() == sentence.second);
         }
     }
@@ -35,7 +35,7 @@ TEST_CASE("Testing English", "[english]") {
         };
 
         for (auto &word : words) {
-            std::vector<SuggestItem> results = symSpell.Lookup(word.first, Verbosity::Closest);
+            auto results = symSpell.Lookup(word.first, Verbosity::Closest);
             REQUIRE(results[0].term == word.second);
         }
     }
@@ -54,12 +54,12 @@ TEST_CASE("Testing English", "[english]") {
         };
 
         for (auto &word : words_within_distance) {
-            std::vector<SuggestItem> results = symSpell.Lookup(word.first, Verbosity::Closest, 2);
+            auto results = symSpell.Lookup(word.first, Verbosity::Closest, 2);
             REQUIRE(results[0].term == word.second);
         }
 
         for (auto &word : words_far_distance) {
-            std::vector<SuggestItem> results = symSpell.Lookup(word.first, Verbosity::Closest, 2);
+            auto results = symSpell.Lookup(word.first, Verbosity::Closest, 2);
             REQUIRE(results.empty());
         }
     }
@@ -74,7 +74,7 @@ TEST_CASE("Testing English", "[english]") {
         };
 
         for (auto &sentence : compunded_sentences) {
-            std::vector<SuggestItem> results = symSpell.LookupCompound(sentence.first);
+            auto results = symSpell.LookupCompound(sentence.first);
             REQUIRE(results[0].term == sentence.second);
         }
     }
@@ -82,7 +82,7 @@ TEST_CASE("Testing English", "[english]") {
     SECTION("Check top verbosity") {
         SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
         symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
-        std::vector<SuggestItem> results = symSpellcustom.Lookup(XL("stream"), Verbosity::Top, 2);
+        auto results = symSpellcustom.Lookup(XL("stream"), Verbosity::Top, 2);
         REQUIRE(1 == results.size());
         REQUIRE(XL("streamc") == results[0].term);
     }
@@ -90,7 +90,7 @@ TEST_CASE("Testing English", "[english]") {
     SECTION("Check all verbosity") {
         SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
         symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
-        std::vector<SuggestItem> results = symSpellcustom.Lookup(XL("stream"), Verbosity::All, 2);
+        auto results = symSpellcustom.Lookup(XL("stream"), Verbosity::All, 2);
         REQUIRE(2 == results.size());
     }
 
@@ -98,7 +98,7 @@ TEST_CASE("Testing English", "[english]") {
         SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
         auto staging = std::make_shared<SuggestionStage>(100);
         symSpellcustom.CreateDictionaryEntry(XL("take"), 4, staging);
-        std::vector<SuggestItem> results = symSpellcustom.Lookup(XL("take"), Verbosity::Closest, 2);
+        auto results = symSpellcustom.Lookup(XL("take"), Verbosity::Closest, 2);
         REQUIRE(XL("take") == results[0].term);
     }
 

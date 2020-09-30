@@ -19,11 +19,9 @@ if (BUILD_FOR_PYTHON)
             GIT_REPOSITORY https://github.com/pybind/pybind11.git
             GIT_TAG v2.5.0)
     FetchContent_MakeAvailable(pybind11)
-    add_library(SymSpellCppPy MODULE SymSpellCppPy.cpp)
+    pybind11_add_module(SymSpellCppPy MODULE SymSpellCppPy.cpp)
     target_sources(SymSpellCppPy INTERFACE library.cpp library.h)
-    target_link_libraries(SymSpellCppPy PRIVATE SymSpellCpp pybind11::module)
-    set_target_properties(SymSpellCppPy PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}"
-            SUFFIX "${PYTHON_MODULE_EXTENSION}")
+    target_link_libraries(SymSpellCppPy PRIVATE SymSpellCpp)
     target_compile_options(SymSpellCppPy PRIVATE
             $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -mtune=native -fvisibility=hidden -flto>)
     message(STATUS "Build for Python = " ${BUILD_FOR_PYTHON})

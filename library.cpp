@@ -7,53 +7,54 @@
 namespace symspellcpppy {
 
     int SymSpell::MaxDictionaryEditDistance() const {
-        return this->maxDictionaryEditDistance;
+        return maxDictionaryEditDistance;
     }
 
     int SymSpell::PrefixLength() const {
-        return this->prefixLength;
+        return prefixLength;
     }
 
     int SymSpell::MaxLength() const {
-        return this->maxDictionaryWordLength;
+        return maxDictionaryWordLength;
     }
 
     long SymSpell::CountThreshold() const {
-        return this->countThreshold;
+        return countThreshold;
     }
 
     int SymSpell::WordCount() {
-        return this->words.size();
+        return words.size();
     }
 
     int SymSpell::EntryCount() {
-        return this->deletes->size();
+        return deletes->size();
     }
 
-    SymSpell::SymSpell(int initialCapacity, int maxDictionaryEditDistance, int prefixLength, int countThreshold,
-                       unsigned char compactLevel) {
-        if (initialCapacity < 0) throw std::invalid_argument("initialCapacity");
-        if (maxDictionaryEditDistance < 0) throw std::invalid_argument("maxDictionaryEditDistance");
-        if (prefixLength < 1 || prefixLength <= maxDictionaryEditDistance) throw std::invalid_argument("prefixLength");
-        if (countThreshold < 0) throw std::invalid_argument("countThreshold");
-        if (compactLevel > 16) throw std::invalid_argument("compactLevel");
+    SymSpell::SymSpell(int _initialCapacity, int _maxDictionaryEditDistance, int _prefixLength, int _countThreshold,
+                       unsigned char _compactLevel) :
+            initialCapacity(_initialCapacity),
+            maxDictionaryEditDistance(_maxDictionaryEditDistance),
+            prefixLength(_prefixLength),
+            countThreshold(_countThreshold) {
+        if (_initialCapacity < 0) throw std::invalid_argument("initialCapacity");
+        if (_maxDictionaryEditDistance < 0) throw std::invalid_argument("maxDictionaryEditDistance");
+        if (_prefixLength < 1 || _prefixLength <= _maxDictionaryEditDistance)
+            throw std::invalid_argument("prefixLength");
+        if (_countThreshold < 0) throw std::invalid_argument("countThreshold");
+        if (_compactLevel > 16) throw std::invalid_argument("compactLevel");
 
-        this->initialCapacity = initialCapacity;
-        this->words.reserve(initialCapacity);
-        this->maxDictionaryEditDistance = maxDictionaryEditDistance;
-        this->prefixLength = prefixLength;
-        this->countThreshold = countThreshold;
-        if (compactLevel > 16) compactLevel = 16;
-        this->compactMask = (UINT_MAX >> (3 + compactLevel)) << 2;
-        this->maxDictionaryWordLength = 0;
-        this->words = std::unordered_map<xstring, int64_t>(initialCapacity);
+        words.reserve(initialCapacity);
+        if (_compactLevel > 16) _compactLevel = 16;
+        compactMask = (UINT_MAX >> (3 + _compactLevel)) << 2;
+        maxDictionaryWordLength = 0;
+        words = std::unordered_map<xstring, int64_t>(initialCapacity);
     }
 
     bool SymSpell::CreateDictionaryEntry(const xstring &key, int64_t count,
                                          const std::shared_ptr<SuggestionStage> &staging) {
 
         if (count <= 0) {
-            if (this->countThreshold > 0)
+            if (countThreshold > 0)
                 return false; // no point doing anything if count is zero, as it can't change anything
             count = 0;
         }
@@ -81,7 +82,7 @@ namespace symspellcpppy {
 
         words.insert(std::pair<xstring, int64_t>(key, count));
 
-        if (key.size() > this->maxDictionaryWordLength) this->maxDictionaryWordLength = key.size();
+        if (key.size() > maxDictionaryWordLength) maxDictionaryWordLength = key.size();
 
         //create deletes
         auto edits = EditsPrefix(key);
@@ -199,10 +200,10 @@ namespace symspellcpppy {
             }
 
         }
-        if (this->deletes == nullptr)
-            this->deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
+        if (deletes == nullptr)
+            deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
         CommitStaged(staging);
-        if (this->EntryCount() == 0)
+        if (EntryCount() == 0)
             return false;
         return true;
     }
@@ -228,10 +229,10 @@ namespace symspellcpppy {
             }
 
         }
-        if (this->deletes == nullptr)
-            this->deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
+        if (deletes == nullptr)
+            deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
         CommitStaged(staging);
-        if (this->EntryCount() == 0)
+        if (EntryCount() == 0)
             return false;
         return true;
     }
@@ -245,7 +246,7 @@ namespace symspellcpppy {
     }
 
     std::vector<SuggestItem> SymSpell::Lookup(xstring input, Verbosity verbosity) {
-        return Lookup(std::move(input), verbosity, this->maxDictionaryEditDistance, false);
+        return Lookup(std::move(input), verbosity, maxDictionaryEditDistance, false);
     }
 
     std::vector<SuggestItem> SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance) {
@@ -255,11 +256,11 @@ namespace symspellcpppy {
     std::vector<SuggestItem>
     SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
         int skip = 0;
-        if (maxEditDistance > this->maxDictionaryEditDistance) throw std::invalid_argument("maxEditDistance");
+        if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("maxEditDistance");
 
         std::vector<SuggestItem> suggestions;
         int inputLen = input.size();
-        if (inputLen - maxEditDistance > this->maxDictionaryWordLength) skip = 1;
+        if (inputLen - maxEditDistance > maxDictionaryWordLength) skip = 1;
 
         int64_t suggestionCount = 0;
         if (words.count(input) && !skip) {
@@ -287,7 +288,7 @@ namespace symspellcpppy {
             } else {
                 candidates.push_back(input);
             }
-            auto distanceComparer = EditDistance(this->distanceAlgorithm);
+            auto distanceComparer = EditDistance(distanceAlgorithm);
             while (candidatePointer < candidates.size()) {
                 xstring candidate = candidates[candidatePointer++];
                 int candidateLen = candidate.size();
@@ -450,7 +451,7 @@ namespace symspellcpppy {
         int lenMask = len;
         if (lenMask > 3) lenMask = 3;
 
-        uint hash = 2166136261;
+        unsigned int hash = 2166136261;
         for (auto i = 0; i < len; i++) {
             {
                 hash ^= s[i];
@@ -458,13 +459,13 @@ namespace symspellcpppy {
             }
         }
 
-        hash &= this->compactMask;
+        hash &= compactMask;
         hash |= (uint) lenMask;
         return (int) hash;
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input) {
-        return LookupCompound(input, this->maxDictionaryEditDistance);
+        return LookupCompound(input, maxDictionaryEditDistance);
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax) {
@@ -472,7 +473,7 @@ namespace symspellcpppy {
 
         std::vector<SuggestItem> suggestions;     //suggestions for a single term
         std::vector<SuggestItem> suggestionParts; //1 line with separate parts
-        auto distanceComparer = EditDistance(this->distanceAlgorithm);
+        auto distanceComparer = EditDistance(distanceAlgorithm);
 
         bool lastCombi = false;
         for (int i = 0; i < termList1.size(); i++) {
@@ -606,11 +607,11 @@ namespace symspellcpppy {
     }
 
     Info SymSpell::WordSegmentation(const xstring &input) {
-        return WordSegmentation(input, this->MaxDictionaryEditDistance(), this->maxDictionaryWordLength);
+        return WordSegmentation(input, MaxDictionaryEditDistance(), maxDictionaryWordLength);
     }
 
     Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance) {
-        return WordSegmentation(input, maxEditDistance, this->maxDictionaryWordLength);
+        return WordSegmentation(input, maxEditDistance, maxDictionaryWordLength);
     }
 
     Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength) {
@@ -638,7 +639,7 @@ namespace symspellcpppy {
                 part = regex_replace(part, r, XL(""));
                 topEd -= part.size();
 
-                std::vector<SuggestItem> results = this->Lookup(part, Top, maxEditDistance);
+                std::vector<SuggestItem> results = Lookup(part, Top, maxEditDistance);
                 if (!results.empty()) {
                     topResult = results[0].term;
                     topEd += results[0].distance;
@@ -660,8 +661,8 @@ namespace symspellcpppy {
                     compositions[destinationIndex].set(part, topResult, topEd, topProbabilityLog);
                 } else if ((i == maxSegmentationWordLength)
                            || (((circular_distance + topEd == destination_distance)
-                           || (circular_distance + separatorLength + topEd == destination_distance))
-                           && (destination_probablity < circular_probablity + topProbabilityLog))
+                                || (circular_distance + separatorLength + topEd == destination_distance))
+                               && (destination_probablity < circular_probablity + topProbabilityLog))
                            || (circular_distance + separatorLength + topEd < destination_distance)) {
                     xstring seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
                     xstring correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
