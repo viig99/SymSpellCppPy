@@ -1,10 +1,10 @@
 # SymSpellCppPy
 A Fast SymSpell v6.5 port for python written in C++ using pybind11.
 
-![UnitTests](https://github.com/viig99/SymSpellCppPy/workflows/UnitTests/badge.svg)
-![Docs](https://img.shields.io/readthedocs/symspellcpppy)
-![Downloads](https://img.shields.io/pypi/dm/SymSpellCppPy)
-![License](https://img.shields.io/github/license/viig99/SymSpellCppPy)
+![UnitTests](https://img.shields.io/github/workflow/status/viig99/SymSpellCppPy/UnitTests?style=flat-square)
+![Docs](https://img.shields.io/readthedocs/symspellcpppy?style=flat-square)
+![Downloads](https://img.shields.io/pypi/dm/SymSpellCppPy?style=flat-square)
+![License](https://img.shields.io/github/license/viig99/SymSpellCppPy?style=flat-square)
 
 ## Installation
 ```shell script
