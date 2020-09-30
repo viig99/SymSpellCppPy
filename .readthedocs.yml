@@ -1,8 +1,9 @@
-version: 2
+build:
+  image: latest
+
+conda:
+  file: docs/environment.yml
 
 python:
-  version: 3.8
-  install:
-    - requirements: docs/requirements.txt
-    - requirements: requirements.txt
-  system_packages: true
+  version: 3.7
+  setup_py_install: true
