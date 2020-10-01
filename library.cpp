@@ -615,6 +615,12 @@ namespace symspellcpppy {
     }
 
     Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength) {
+        // v6.7
+        // normalize ligatures:
+        // "scientific"
+        // "scientiﬁc" "ﬁelds" "ﬁnal"
+        // TODO: Figure out how to do the below utf-8 normalization in C++.
+        // input = input.Normalize(System.Text.NormalizationForm.FormKC).Replace("\u002D", "");//.Replace("\uC2AD","");
         int arraySize = std::min(maxSegmentationWordLength, (int) input.size());
         std::vector<Info> compositions = std::vector<Info>(arraySize);
         int circularIndex = -1;
