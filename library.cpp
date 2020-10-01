@@ -30,18 +30,18 @@ namespace symspellcpppy {
         return deletes->size();
     }
 
-    SymSpell::SymSpell(int _initialCapacity, int _maxDictionaryEditDistance, int _prefixLength, int _countThreshold,
+    SymSpell::SymSpell(int _maxDictionaryEditDistance, int _prefixLength, int _countThreshold, int _initialCapacity,
                        unsigned char _compactLevel) :
-            initialCapacity(_initialCapacity),
             maxDictionaryEditDistance(_maxDictionaryEditDistance),
             prefixLength(_prefixLength),
-            countThreshold(_countThreshold) {
-        if (_initialCapacity < 0) throw std::invalid_argument("initialCapacity");
-        if (_maxDictionaryEditDistance < 0) throw std::invalid_argument("maxDictionaryEditDistance");
+            countThreshold(_countThreshold),
+            initialCapacity(_initialCapacity) {
+        if (_initialCapacity < 0) throw std::invalid_argument("initial_capacity is too small.");
+        if (_maxDictionaryEditDistance < 0) throw std::invalid_argument("max_dictionary_edit_distance cannot be negative");
         if (_prefixLength < 1 || _prefixLength <= _maxDictionaryEditDistance)
-            throw std::invalid_argument("prefixLength");
-        if (_countThreshold < 0) throw std::invalid_argument("countThreshold");
-        if (_compactLevel > 16) throw std::invalid_argument("compactLevel");
+            throw std::invalid_argument("prefix_length cannot be less than 1 or smaller than max_dictionary_edit_distance");
+        if (_countThreshold < 0) throw std::invalid_argument("count_threshold cannot be negative");
+        if (_compactLevel > 16) throw std::invalid_argument("compact_level cannot be greater than 16");
 
         words.reserve(initialCapacity);
         if (_compactLevel > 16) _compactLevel = 16;
@@ -67,16 +67,16 @@ namespace symspellcpppy {
             if (count >= countThreshold) {
                 belowThresholdWords.erase(key);
             } else {
-                belowThresholdWords.insert(std::pair<xstring, int64_t>(key, count));
+                belowThresholdWords[key] = count;
                 return false;
             }
         } else if (wordsFinded != words.end()) {
             countPrevious = wordsFinded->second;
             count = (MAXINT - countPrevious > count) ? countPrevious + count : MAXINT;
-            words.insert(std::pair<xstring, int64_t>(key, count));
+            words.at(key) = count;
             return false;
         } else if (count < CountThreshold()) {
-            belowThresholdWords.insert(std::pair<xstring, int64_t>(key, count));
+            belowThresholdWords[key] = count;
             return false;
         }
 
@@ -98,11 +98,9 @@ namespace symspellcpppy {
                 std::vector<xstring> suggestions;
                 if (deletesFinded != deletes->end()) {
                     suggestions = deletesFinded->second;
-                    std::vector<xstring> newSuggestions(suggestions.size() + 1);
-                    for (int id = 0; id < suggestions.size(); id++) {
-                        newSuggestions[id] = suggestions[id];
-                    }
-
+                    std::vector<xstring> newSuggestions;
+                    newSuggestions.reserve(suggestions.size() + 1);
+                    std::copy(suggestions.begin(), suggestions.end(), std::back_inserter(newSuggestions));
                     (*deletes)[deleteHash] = suggestions = newSuggestions;
                 } else {
                     suggestions = std::vector<xstring>(1);
@@ -192,16 +190,18 @@ namespace symspellcpppy {
             while (getline(ss, token, separatorChars))
                 lineParts.push_back(token);
             if (lineParts.size() >= 2) {
-                int64_t count = stoll(lineParts[countIndex]);
-
+                int64_t count = 1;
+                try {
+                    count = std::stoll(lineParts[countIndex]);
+                } catch (const std::invalid_argument&) {
+                    // Do nothing
+                }
                 CreateDictionaryEntry(lineParts[termIndex], count, staging);
             } else {
                 CreateDictionaryEntry(line, 1, staging);
             }
 
         }
-        if (deletes == nullptr)
-            deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
         CommitStaged(staging);
         if (EntryCount() == 0)
             return false;
@@ -229,8 +229,6 @@ namespace symspellcpppy {
             }
 
         }
-        if (deletes == nullptr)
-            deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
         CommitStaged(staging);
         if (EntryCount() == 0)
             return false;
@@ -242,6 +240,8 @@ namespace symspellcpppy {
     }
 
     void SymSpell::CommitStaged(const std::shared_ptr<SuggestionStage> &staging) {
+        if (deletes == nullptr)
+            deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
         staging->CommitTo(deletes);
     }
 
@@ -256,7 +256,7 @@ namespace symspellcpppy {
     std::vector<SuggestItem>
     SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
         int skip = 0;
-        if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("maxEditDistance");
+        if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("Distance too large");
 
         std::vector<SuggestItem> suggestions;
         int inputLen = input.size();
@@ -536,7 +536,7 @@ namespace symspellcpppy {
                                 }
 
                                 suggestionSplit.distance = distance2;
-                                if (bigrams.count(suggestionSplit.term)) {
+                                if (bigrams.count(suggestionSplit.term) > 0) {
                                     long bigramCount = bigrams.at(suggestionSplit.term);
                                     suggestionSplit.count = bigramCount;
                                     if (!suggestions.empty()) {
@@ -562,7 +562,7 @@ namespace symspellcpppy {
                                                                                 (double) suggestions2[0].count));
                                 }
 
-                                if (suggestionSplit.count > suggestionSplitBest.count)
+                                if (suggestionSplitBest.count == 0 || (suggestionSplit.count > suggestionSplitBest.count))
                                     suggestionSplitBest.set(suggestionSplit);
                             }
                         }
@@ -639,9 +639,22 @@ namespace symspellcpppy {
                 part = regex_replace(part, r, XL(""));
                 topEd -= part.size();
 
-                std::vector<SuggestItem> results = Lookup(part, Top, maxEditDistance);
+                //v6.7
+                //Lookup against the lowercase term
+                auto partLower = part;
+                std::transform(part.begin(), part.end(), partLower.begin(), ::tolower);
+                std::vector<SuggestItem> results = Lookup(partLower, Top, maxEditDistance);
                 if (!results.empty()) {
                     topResult = results[0].term;
+
+                    //v6.7
+                    //retain/preserve upper case
+                    if (std::isupper(part[0]))
+                    {
+                        topResult[0] = std::toupper(topResult[0]);
+                    }
+
+
                     topEd += results[0].distance;
                     topProbabilityLog = log10((double) results[0].count / (double) N);
                 } else {
@@ -664,11 +677,24 @@ namespace symspellcpppy {
                                 || (circular_distance + separatorLength + topEd == destination_distance))
                                && (destination_probablity < circular_probablity + topProbabilityLog))
                            || (circular_distance + separatorLength + topEd < destination_distance)) {
-                    xstring seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
-                    xstring correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
-                    int d = circular_distance + separatorLength + topEd;
-                    double prob = circular_probablity + topProbabilityLog;
-                    compositions[destinationIndex].set(seg, correct, d, prob);
+                    //v6.7
+                    //keep punctuation or spostrophe adjacent to previous word
+                    if (((topResult.size() == 1) && std::ispunct(topResult[0])) || ((topResult.size() == 2) &&
+                                                                                          topResult.rfind("’", 0) == 0)) {
+                        xstring seg = compositions[circularIndex].getSegmented() + part;
+                        xstring correct = compositions[circularIndex].getCorrected() + topResult;
+                        int d = circular_distance        + topEd;
+                        double prob = circular_probablity + topProbabilityLog;
+                        compositions[destinationIndex].set(seg, correct, d, prob);
+                    }
+                    else {
+                        xstring seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
+                        xstring correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
+                        int d = circular_distance + separatorLength + topEd;
+                        double prob = circular_probablity + topProbabilityLog;
+                        compositions[destinationIndex].set(seg, correct, d, prob);
+                    }
+
                 }
             }
             circularIndex++;

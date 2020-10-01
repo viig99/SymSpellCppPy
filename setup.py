@@ -1,20 +1,17 @@
+#!/usr/bin/env python
+
 import os
 import re
 import sys
 import platform
 import subprocess
-import unittest
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
-def find_test_suite():
-    test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('tests', pattern='*.py')
-    return test_suite
-
 from os import path
+
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -75,7 +72,8 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.', '--target', os.path.basename(ext.name)] + build_args, cwd=self.build_temp)
+        subprocess.check_call(['cmake', '--build', '.', '--target', os.path.basename(ext.name)] + build_args,
+                              cwd=self.build_temp)
 
 
 setup(
@@ -86,7 +84,7 @@ setup(
     description='A Fast SymSpell port for python written in C++ using pybind11.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    test_suite='setup.find_test_suite',
+    test_suite="tests/SymSpellCppPyTest.py",
     ext_modules=[CMakeExtension('SymSpellCppPy')],
     cmdclass=dict(build_ext=CMakeBuild),
     python_requires=">=3.4",

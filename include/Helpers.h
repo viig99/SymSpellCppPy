@@ -174,6 +174,7 @@ public:
                 std::vector<xstring> newSuggestions;
                 newSuggestions.reserve(suggestions.size() + Delete.second.count);
                 std::copy(suggestions.begin(), suggestions.end(), back_inserter(newSuggestions));
+                suggestions = newSuggestions;
             } else {
                 i = 0;
                 int32_t count = Delete.second.count;

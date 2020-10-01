@@ -7,11 +7,13 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_BUILD_TYPE "Release")
 
 option(BUILD_FOR_PYTHON "Build for Python" OFF)
+option(BUILD_FOR_TEST "Build Tests" ON)
 
 add_library(SymSpellCpp SHARED library.cpp library.h)
 target_include_directories(SymSpellCpp PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 if (BUILD_FOR_PYTHON)
+    set(CMAKE_BUILD_TYPE "Release")
     Include(FetchContent)
 
     FetchContent_Declare(
@@ -25,7 +27,8 @@ if (BUILD_FOR_PYTHON)
     target_compile_options(SymSpellCppPy PRIVATE
             $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -mtune=native -fvisibility=hidden -flto>)
     message(STATUS "Build for Python = " ${BUILD_FOR_PYTHON})
-else ()
+elseif (BUILD_FOR_TEST)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
     Include(FetchContent)
 
     FetchContent_Declare(

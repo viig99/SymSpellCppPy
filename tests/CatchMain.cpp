@@ -6,12 +6,11 @@
 using namespace symspellcpppy;
 
 TEST_CASE("Testing English", "[english]") {
-    const int initialCapacity = 82765;
     const int maxEditDistance = 2;
     const int prefixLength = 3;
 
     SECTION("Do Word Segmentation") {
-        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> sentences = {
                 {XL("thequickbrownfoxjumpsoverthelazydog"),                                                XL("the quick brown fox jumps over the lazy dog")},
@@ -26,7 +25,7 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Do Spell Correction") {
-        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> words = {
                 {XL("tke"),          XL("the")},
@@ -41,7 +40,7 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Do Spell Correction With MaxEditDistance=2") {
-        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         std::unordered_map<xstring, xstring> words_within_distance = {
                 {XL("tke"),     XL("the")},
@@ -65,10 +64,12 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Correct Compound Mistakes") {
-        SymSpell symSpell(initialCapacity, maxEditDistance, prefixLength);
+        SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        symSpell.LoadBigramDictionary("../resources/frequency_bigramdictionary_en_243_342.txt", 0, 2, XL(' '));
         std::unordered_map<xstring, xstring> compunded_sentences = {
-                {XL("whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him"), XL("whereas the love head dated for much of the past who couldn't read in sixth grade and inspired him")},
+                {XL("whereis th elove"),                                                                                  XL("where is the love")},
+                {XL("whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him"), XL("where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him")},
                 {XL("in te dhird qarter oflast jear he hadlearned ofca sekretplan"),                                      XL("in the third quarter of last year he had learned of a secret plan")},
                 {XL("the bigjest playrs in te strogsommer film slatew ith plety of funn"),                                XL("the biggest players in the strong summer film slate with plenty of fun")}
         };
@@ -80,7 +81,7 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Check top verbosity") {
-        SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
+        SymSpell symSpellcustom(maxEditDistance, prefixLength);
         symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
         auto results = symSpellcustom.Lookup(XL("stream"), Verbosity::Top, 2);
         REQUIRE(1 == results.size());
@@ -88,14 +89,15 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("Check all verbosity") {
-        SymSpell symSpellcustom(initialCapacity, maxEditDistance, prefixLength);
+        SymSpell symSpellcustom(maxEditDistance, prefixLength);
         symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
         auto results = symSpellcustom.Lookup(XL("stream"), Verbosity::All, 2);
         REQUIRE(2 == results.size());
     }
 
     SECTION("check custom entry of dictionary") {
-        SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
+        SymSpell symSpellcustom(maxEditDistance, prefixLength, DEFAULT_COUNT_THRESHOLD, DEFAULT_INITIAL_CAPACITY,
+                                DEFAULT_COMPACT_LEVEL);
         auto staging = std::make_shared<SuggestionStage>(100);
         symSpellcustom.CreateDictionaryEntry(XL("take"), 4, staging);
         auto results = symSpellcustom.Lookup(XL("take"), Verbosity::Closest, 2);
@@ -103,7 +105,8 @@ TEST_CASE("Testing English", "[english]") {
     }
 
     SECTION("check save works fine.") {
-        SymSpell symSpellcustom(100, maxEditDistance, prefixLength);
+        SymSpell symSpellcustom(maxEditDistance, prefixLength, DEFAULT_COUNT_THRESHOLD, DEFAULT_INITIAL_CAPACITY,
+                                DEFAULT_COMPACT_LEVEL);
         symSpellcustom.LoadDictionary("../resources/frequency_dictionary_en_test_verbosity.txt", 0, 1, XL(' '));
         auto filepath = "../resources/model.bin";
         std::ofstream binary_path(filepath, std::ios::out | std::ios::app | std::ios::binary);
@@ -114,5 +117,24 @@ TEST_CASE("Testing English", "[english]") {
             throw std::invalid_argument("Cannot save to file");
         }
         std::remove(filepath);
+    }
+
+    SECTION("Compund mistakes distance") {
+        SymSpell symSpell(maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        symSpell.LoadBigramDictionary("../resources/frequency_bigramdictionary_en_243_342.txt", 0, 2, XL(' '));
+        std::string typo = "the bigjest playrs";
+        std::string correction = "the biggest players";
+        auto results = symSpell.LookupCompound(typo, 2);
+        REQUIRE(results[0].distance == 2);
+    }
+
+    SECTION("Compund mistakes capitals") {
+        SymSpell symSpell(maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        std::string typo = "can yu readthis";
+        std::string correction = "can you read this";
+        auto results = symSpell.LookupCompound(typo, 2);
+        REQUIRE(results[0].term == correction);
     }
 }

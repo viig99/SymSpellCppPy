@@ -1,16 +1,16 @@
 #pragma once
 
 //#define UNICODE_SUPPORT
-#define DEFAULT_SEPARATOR_CHAR XL('\t')
+#define DEFAULT_SEPARATOR_CHAR XL(' ')
 #define DEFAULT_MAX_EDIT_DISTANCE 2
 #define DEFAULT_PREFIX_LENGTH 7
 #define DEFAULT_COUNT_THRESHOLD 1
 #define DEFAULT_INITIAL_CAPACITY 82765
 #define DEFAULT_COMPACT_LEVEL 5
 #define min3(a, b, c) (min(a, min(b, c)))
-#define MAXINT INT_MAX
+#define MAXINT LLONG_MAX
 #define M
-#define MAXLONG LONG_MAX
+#define MAXLONG MAXINT
 
 #include <fstream>
 #include <sstream>
@@ -134,12 +134,12 @@ namespace symspellcpppy {
         /// <param name="prefixLength">The length of word prefixes used for spell checking..</param>
         /// <param name="countThreshold">The minimum frequency count for dictionary words to be considered correct spellings.</param>
         /// <param name="compactLevel">Degree of favoring lower memory use over speed (0=fastest,most memory, 16=slowest,least memory).</param>
-        explicit SymSpell(int initialCapacity = DEFAULT_INITIAL_CAPACITY,
-                          int maxDictionaryEditDistance = DEFAULT_MAX_EDIT_DISTANCE,
+        explicit SymSpell(int maxDictionaryEditDistance = DEFAULT_MAX_EDIT_DISTANCE,
                           int prefixLength = DEFAULT_PREFIX_LENGTH, int countThreshold = DEFAULT_COUNT_THRESHOLD,
+                          int initialCapacity = DEFAULT_INITIAL_CAPACITY,
                           unsigned char compactLevel = DEFAULT_COMPACT_LEVEL);
 
-        bool CreateDictionaryEntry(const xstring &key, int64_t count, const std::shared_ptr<SuggestionStage>& staging);
+        bool CreateDictionaryEntry(const xstring &key, int64_t count, const std::shared_ptr<SuggestionStage> &staging);
 
         std::unordered_map<xstring, long> bigrams;
         int64_t bigramCountMin = MAXLONG;
@@ -183,7 +183,7 @@ namespace symspellcpppy {
         /// a corpus using CreateDictionary.</remarks>
         void PurgeBelowThresholdWords();
 
-        void CommitStaged(const std::shared_ptr<SuggestionStage>& staging);
+        void CommitStaged(const std::shared_ptr<SuggestionStage> &staging);
 
         /// <summary>Find suggested spellings for a given input word, using the maximum
         /// edit distance specified during construction of the SymSpell dictionary.</summary>
@@ -289,10 +289,9 @@ namespace symspellcpppy {
         Info WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength);
 
 
-        template <class Archive>
-        void serialize( Archive & ar )
-        {
-            ar(deletes, words, maxDictionaryWordLength  );
+        template<class Archive>
+        void serialize(Archive &ar) {
+            ar(deletes, words, maxDictionaryWordLength);
         }
     };
 }

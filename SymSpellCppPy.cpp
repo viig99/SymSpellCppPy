@@ -67,16 +67,22 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
 
     py::class_<symspellcpppy::SymSpell>(m, "SymSpell")
             .def(py::init<int, int, int, int, unsigned char>(), "SymSpell builder options",
-                 py::arg("initial_capacity") = DEFAULT_INITIAL_CAPACITY,
                  py::arg("max_dictionary_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
                  py::arg("prefix_length") = DEFAULT_PREFIX_LENGTH,
                  py::arg("count_threshold") = DEFAULT_COUNT_THRESHOLD,
+                 py::arg("initial_capacity") = DEFAULT_INITIAL_CAPACITY,
                  py::arg("compact_level") = DEFAULT_COMPACT_LEVEL
             )
             .def("word_count", &symspellcpppy::SymSpell::WordCount, "Number of words entered.")
             .def("max_length", &symspellcpppy::SymSpell::MaxLength, "Max length of words entered.")
             .def("entry_count", &symspellcpppy::SymSpell::EntryCount, "Total number of deletes formed.")
             .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold, "Frequency of word so that its considered a valid word for spelling correction.")
+            .def("create_dictionary_entry", [](symspellcpppy::SymSpell &sym, const xstring &key, int64_t count) {
+                auto staging = std::make_shared<SuggestionStage>(128);
+                sym.CreateDictionaryEntry(key, count, staging);
+                sym.CommitStaged(staging);
+                return sym.EntryCount() > 0;
+            }, "Create/Update an entry in the dictionary.", py::arg("key"), py::arg("count"))
             .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(
                     &symspellcpppy::SymSpell::LoadBigramDictionary),
                  "Load multiple dictionary entries from a file of word/frequency count pairs.",
