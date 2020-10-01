@@ -27,8 +27,7 @@ if (BUILD_FOR_PYTHON)
     target_compile_options(SymSpellCppPy PRIVATE
             $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -mtune=native -fvisibility=hidden -flto>)
     message(STATUS "Build for Python = " ${BUILD_FOR_PYTHON})
-elseif (BUILD_FOR_TEST)
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+else ()
     Include(FetchContent)
 
     FetchContent_Declare(

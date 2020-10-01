@@ -141,6 +141,8 @@ namespace symspellcpppy {
 
         bool CreateDictionaryEntry(const xstring &key, int64_t count, const std::shared_ptr<SuggestionStage> &staging);
 
+        bool DeleteDictionaryEntry(const xstring &key);
+
         std::unordered_map<xstring, long> bigrams;
         int64_t bigramCountMin = MAXLONG;
 

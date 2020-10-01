@@ -101,10 +101,10 @@ namespace symspellcpppy {
                     std::vector<xstring> newSuggestions;
                     newSuggestions.reserve(suggestions.size() + 1);
                     std::copy(suggestions.begin(), suggestions.end(), std::back_inserter(newSuggestions));
-                    (*deletes)[deleteHash] = suggestions = newSuggestions;
+                    deletes->at(deleteHash) = suggestions = newSuggestions;
                 } else {
                     suggestions = std::vector<xstring>(1);
-                    (*deletes).insert(std::pair<int, std::vector<xstring>>(deleteHash, suggestions));
+                    deletes->insert(std::pair<int, std::vector<xstring>>(deleteHash, suggestions));
                 }
                 suggestions[suggestions.size() - 1] = key;
             }
@@ -112,6 +112,32 @@ namespace symspellcpppy {
         }
 
         return true;
+    }
+
+    bool SymSpell::DeleteDictionaryEntry(const std::string &key) {
+        auto wordsFinded = words.find(key);
+        if (wordsFinded != words.end()) {
+            words.erase(wordsFinded);
+            if(wordsFinded->first.size() == maxDictionaryWordLength) {
+                int max_size = 0;
+                for (auto& word: words) {
+                    max_size = std::max(static_cast<int>(word.first.size()), max_size);
+                }
+                maxDictionaryWordLength = max_size;
+            }
+            auto edits = EditsPrefix(key);
+            for (const auto &edit: *edits) {
+                int deleteHash = GetstringHash(edit);
+                auto deletesFinded = deletes->find(deleteHash);
+                if (deletesFinded != deletes->end()) {
+                    auto delete_vec = deletesFinded->second;
+                    auto it = std::find (delete_vec.begin(), delete_vec.end(), key);
+                    if (it < delete_vec.end()) delete_vec.erase(it);
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     bool
@@ -437,7 +463,7 @@ namespace symspellcpppy {
         return deleteWords;
     }
 
-    std::shared_ptr<std::unordered_set<xstring>> SymSpell::EditsPrefix(xstring key) {
+        std::shared_ptr<std::unordered_set<xstring>> SymSpell::EditsPrefix(xstring key) {
         auto m = std::make_shared<std::unordered_set<xstring>>();
         if (key.size() <= maxDictionaryEditDistance) m->insert(XL(""));
         if (key.size() > prefixLength) key = key.substr(0, prefixLength);

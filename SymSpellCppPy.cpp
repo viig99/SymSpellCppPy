@@ -83,6 +83,9 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                 sym.CommitStaged(staging);
                 return sym.EntryCount() > 0;
             }, "Create/Update an entry in the dictionary.", py::arg("key"), py::arg("count"))
+            .def("delete_dictionary_entry", &symspellcpppy::SymSpell::DeleteDictionaryEntry,
+                 "Delete the key from the dictionary & updates internal representation accordingly.",
+                 py::arg("key"))
             .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(
                     &symspellcpppy::SymSpell::LoadBigramDictionary),
                  "Load multiple dictionary entries from a file of word/frequency count pairs.",

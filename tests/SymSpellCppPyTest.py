@@ -1,5 +1,5 @@
 import unittest
-from SymSpellCppPy import SymSpell, Verbosity
+from SymSpellCppPy import SymSpell, Verbosity, SuggestItem
 import os
 import sys
 
@@ -389,36 +389,231 @@ class SymSpellCppPyTests(unittest.TestCase):
         self.assertEqual(9, results[0].distance)
         self.assertEqual(0, results[0].count)
 
-    # TODO: test_lookup_compound_only_combi
-    # TODO: test_lookup_compound_no_suggestion
+    def test_lookup_compound_only_combi(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.create_dictionary_entry("steam", 1)
+        sym_spell.create_dictionary_entry("machine", 1)
+
+        typo = "ste am machie"
+        correction = "steam machine"
+        results = sym_spell.lookup_compound(typo, edit_distance_max)
+        self.assertEqual(1, len(results))
+        self.assertEqual(correction, results[0].term)
+
+    def test_lookup_compound_no_suggestion(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.create_dictionary_entry("steam", 1)
+        sym_spell.create_dictionary_entry("machine", 1)
+
+        typo = "qwer erty ytui a"
+        results = sym_spell.lookup_compound(typo, edit_distance_max)
+        self.assertEqual(1, len(results))
+        self.assertEqual(typo, results[0].term)
+
+    def test_load_dictionary_encoding(self):
+        dictionary_path = os.path.join(self.fortests_path, "non_en_dict.txt")
+
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(dictionary_path, 0, 1)
+
+        result = sym_spell.lookup("АБ", Verbosity.TOP, 2)
+        self.assertEqual(1, len(result))
+        self.assertEqual("АБИ", result[0].term)
+
+    def test_word_segmentation(self):
+        edit_distance_max = 0
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+
+        typo = "thequickbrownfoxjumpsoverthelazydog"
+        correction = "the quick brown fox jumps over the lazy dog"
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.corrected_string)
+
+        typo = "itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"
+        correction = ("it was a bright cold day in april and the clocks "
+                      "were striking thirteen")
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.segmented_string)
+
+        typo = ("itwasthebestoftimesitwastheworstoftimesitwastheageofwisdom"
+                "itwastheageoffoolishness")
+        correction = ("it was the best of times it was the worst of times "
+                      "it was the age of wisdom it was the age of foolishness")
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.segmented_string)
+
+    def test_word_segmentation_with_arguments(self):
+        edit_distance_max = 0
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+
+        typo = "thequickbrownfoxjumpsoverthelazydog"
+        correction = "the quick brown fox jumps over the lazy dog"
+        result = sym_spell.word_segmentation(typo, edit_distance_max, 11)
+        self.assertEqual(correction, result.corrected_string)
+
+        typo = "itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"
+        correction = ("it was a bright cold day in april and the clocks "
+                      "were striking thirteen")
+        result = sym_spell.word_segmentation(typo, edit_distance_max, 11)
+        self.assertEqual(correction, result.corrected_string)
+
+        typo = (" itwasthebestoftimesitwastheworstoftimesitwastheageofwisdom"
+                "itwastheageoffoolishness")
+        correction = ("it was the best of times it was the worst of times "
+                      "it was the age of wisdom it was the age of foolishness")
+        result = sym_spell.word_segmentation(typo, edit_distance_max, 11)
+        self.assertEqual(correction, result.corrected_string)
+
+    def test_word_segmentation_capitalize(self):
+        edit_distance_max = 0
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+
+        typo = "Thequickbrownfoxjumpsoverthelazydog"
+        correction = "The quick brown fox jumps over the lazy dog"
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.corrected_string)
+
+        typo = "Itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"
+        correction = ("It was a bright cold day in april and the clocks "
+                      "were striking thirteen")
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.segmented_string)
+
+        typo = ("Itwasthebestoftimesitwastheworstoftimesitwastheageofwisdom"
+                "itwastheageoffoolishness")
+        correction = ("It was the best of times it was the worst of times "
+                      "it was the age of wisdom it was the age of foolishness")
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.segmented_string)
+
+    def test_word_segmentation_apostrophe(self):
+        edit_distance_max = 0
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+
+        typo = "There'resomewords"
+        correction = ("There' re some words")
+        result = sym_spell.word_segmentation(typo)
+        self.assertEqual(correction, result.corrected_string)
+
+    def test_suggest_item(self):
+        si_1 = SuggestItem("asdf", 12, 34)
+        si_2 = SuggestItem("sdfg", 12, 34)
+        si_3 = SuggestItem("dfgh", 56, 78)
+
+        self.assertTrue(si_1 == si_1)
+        self.assertFalse(si_2 == si_3)
+
+        self.assertEqual("asdf", si_1.term)
+        si_1.term = "qwer"
+        self.assertEqual("qwer", si_1.term)
+
+        self.assertEqual(34, si_1.count)
+        si_1.count = 78
+        self.assertEqual(78, si_1.count)
+
+        self.assertEqual("qwer, 12, 78", str(si_1))
+
+    def test_create_dictionary_invalid_path(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        self.assertEqual(False, sym_spell.create_dictionary(
+            "invalid/dictionary/path.txt"))
+
+    def test_create_dictionary(self):
+        corpus_path = os.path.join(self.fortests_path, "big_modified.txt")
+        big_words_path = os.path.join(self.fortests_path, "big_words.txt")
+
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.create_dictionary(corpus_path)
+        self.assertEqual(68, sym_spell.max_length())
+
+    def test_pickle_compressed(self):
+        pickle_path = os.path.join(self.fortests_path, "dictionary.pickle")
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+        sym_spell.save_pickle(pickle_path)
+
+        sym_spell_2 = SymSpell(edit_distance_max, prefix_length)
+        sym_spell_2.load_pickle(pickle_path)
+        self.assertEqual(sym_spell.max_length(), sym_spell_2.max_length())
+        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True)[0].term, sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
+        os.remove(pickle_path)
+
+    def test_delete_dictionary_entry(self):
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("stea", 1)
+        sym_spell.create_dictionary_entry("steama", 2)
+        sym_spell.create_dictionary_entry("steem", 3)
+
+        result = sym_spell.lookup("steama", Verbosity.TOP, 2)
+        self.assertEqual(1, len(result))
+        self.assertEqual("steama", result[0].term)
+        self.assertEqual(len("steama"), sym_spell.max_length())
+        self.assertEqual(3, sym_spell.word_count())
+
+        self.assertTrue(sym_spell.delete_dictionary_entry("steama"))
+        self.assertEqual(len("steem"), sym_spell.max_length())
+        self.assertEqual(2, sym_spell.word_count())
+        result = sym_spell.lookup("steama", Verbosity.TOP, 2)
+        self.assertEqual(1, len(result))
+        self.assertEqual("steem", result[0].term)
+
+        self.assertTrue(sym_spell.delete_dictionary_entry("stea"))
+        self.assertEqual(len("steem"), sym_spell.max_length())
+        self.assertEqual(1, sym_spell.word_count())
+        result = sym_spell.lookup("steama", Verbosity.TOP, 2)
+        self.assertEqual(1, len(result))
+        self.assertEqual("steem", result[0].term)
+
+    def test_delete_dictionary_entry_invalid_word(self):
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("stea", 1)
+        sym_spell.create_dictionary_entry("steama", 2)
+        sym_spell.create_dictionary_entry("steem", 3)
+
+        result = sym_spell.lookup("steama", Verbosity.TOP, 2)
+        self.assertEqual(1, len(result))
+        self.assertEqual("steama", result[0].term)
+        self.assertEqual(len("steama"), sym_spell.max_length())
+
+        self.assertFalse(sym_spell.delete_dictionary_entry("steamab"))
+        result = sym_spell.lookup("steama", Verbosity.TOP, 2)
+        self.assertEqual(1, len(result))
+        self.assertEqual("steama", result[0].term)
+        self.assertEqual(len("steama"), sym_spell.max_length())
+
+    # TODO: test_create_dictionary_entry_below_threshold
+    # TODO: test_lookup_avoid_exact_match_early_exit
     # TODO: test_lookup_compound_replaced_words
     # TODO: test_lookup_compound_replaced_words_no_bigram
     # TODO: test_lookup_compound_ignore_non_words
     # TODO: test_lookup_compound_ignore_non_words_no_bigram
-    # TODO: test_load_dictionary_encoding
-    # TODO: test_word_segmentation
     # TODO: test_word_segmentation_ignore_token
-    # TODO: test_word_segmentation_with_arguments
-    # TODO: test_word_segmentation_capitalize
-    # TODO: test_word_segmentation_apostrophe
     # TODO: test_word_segmentation_ligature
-    # TODO: test_suggest_item
-    # TODO: test_create_dictionary_invalid_path
-    # TODO: test_create_dictionary
-    # TODO: test_pickle_uncompressed
-    # TODO: test_pickle_compressed
-    # TODO: test_pickle_invalid
-    # TODO: test_delete_dictionary_entry
-    # TODO: test_delete_dictionary_entry_invalid_word
     # TODO: test_lookup_transfer_casing
     # TODO: test_lookup_compound_transfer_casing
     # TODO: test_lookup_compound_transfer_casing_no_bigram
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords_no_bigram
-
-    # TODO: test_create_dictionary_entry_below_threshold
-    # TODO: test_lookup_avoid_exact_match_early_exit
-
     # TODO: Test for lookup and lookup_compound with examples where first character is in capital, this fails currently.
 
     def test_lookup(self):

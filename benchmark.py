@@ -168,3 +168,49 @@ def test_load_pickle_symspellcpppy(benchmark):
     os.remove("temp_cpppy/temp.bin")
     os.rmdir("temp_cpppy")
     assert (sym_spell.lookup("tke", VerbosityCpp.CLOSEST)[0].term == "the")
+
+@pytest.mark.benchmark(
+    group="create_entry",
+    min_rounds=100,
+    disable_gc=True,
+    warmup=False
+)
+def test_create_entry_symspellpy(benchmark):
+    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
+    benchmark(sym_spell.create_dictionary_entry, "steama", 2)
+
+@pytest.mark.benchmark(
+    group="create_entry",
+    min_rounds=100,
+    disable_gc=True,
+    warmup=False
+)
+def test_create_entry_symspellcpppy(benchmark):
+    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
+    benchmark(sym_spell.create_dictionary_entry, "steama", 2)
+
+@pytest.mark.benchmark(
+    group="delete_entry",
+    min_rounds=100,
+    disable_gc=True,
+    warmup=False
+)
+def test_delete_entry_symspellpy(benchmark):
+    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
+    sym_spell.create_dictionary_entry("stea", 1)
+    sym_spell.create_dictionary_entry("steama", 2)
+    sym_spell.create_dictionary_entry("steem", 3)
+    benchmark(sym_spell.delete_dictionary_entry, "steama")
+
+@pytest.mark.benchmark(
+    group="delete_entry",
+    min_rounds=100,
+    disable_gc=True,
+    warmup=False
+)
+def test_delete_entry_symspellcpppy(benchmark):
+    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
+    sym_spell.create_dictionary_entry("stea", 1)
+    sym_spell.create_dictionary_entry("steama", 2)
+    sym_spell.create_dictionary_entry("steem", 3)
+    benchmark(sym_spell.delete_dictionary_entry, "steama")
