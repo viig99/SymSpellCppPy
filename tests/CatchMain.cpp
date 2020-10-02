@@ -24,6 +24,41 @@ TEST_CASE("Testing English", "[english]") {
         }
     }
 
+//    SECTION("Test 6.7 Changes") {
+//        xstring input =
+//        XL("AbstractHowdoesauser’spriorexperiencewithdeeplearningimpactaccuracy?Wepresentaninitialstudybased"
+//        "on31participantswithdifferentlevelsofexperience.Theirtaskistoperformhyperparameteroptimizationfor"
+//        "agivendeeplearningarchitecture.There-sultsshowastrongpositivecorrelationbetweentheparticipant’sexperience"
+//        "andtheﬁnalperformance.Theyadditionallyindicatethatanexperiencedparticipantﬁndsbettersolu-tions"
+//        "usingfewerresourcesonaverage.Thedatasuggestsfurthermorethatparticipantswithnopriorexperiencefollow"
+//        "randomstrategiesintheirpursuitofoptimalhyperpa-rameters.Ourstudyinvestigatesthesubjectivehumanfactor"
+//        "incomparisonsofstateoftheartresultsandscientiﬁcreproducibilityindeeplearning.1IntroductionThepopularity"
+//        "ofdeeplearninginvariousﬁeldssuchasimagerecognition[9,19],speech[11,30],bioinformatics[21,24],"
+//        "questionanswering[3]etc.stemsfromtheseeminglyfavorabletrade-offbetweentherecognitionaccuracy"
+//        "andtheiroptimizationburdenlecunetal20attributetheirsuccess");
+//        XL("AbstractHowdoesauser’spriorexperience?");
+
+//        xstring output =
+//        XL("Abstract How does a user’s prior experience with deep learning impact accuracy? We present an initial "
+//        "study based on 31 participants with different levels of experience. Their task is to perform hyper "
+//        "parameter optimization for a given deep learning architecture. The results show a strong positive "
+//        "correlation between the participant’s experience and the final performance. They additionally indicate "
+//        "that an experienced participant finds better solutions using fewer resources on average. The data "
+//        "suggests furthermore that participants with no prior experience follow random strategies in their "
+//        "pursuit of optimal hyper parameters. Our study investigates the subjective human factor in comparisons "
+//        "of state of the art results and scientific reproducibility in deep learning. 1 Introduction The "
+//        "popularity of deep learning in various fields such as image recognition [9,19], speech [11,30], bio "
+//        "informatics [21,24], question answering [3] etc. stems from the seemingly favorable trade off between "
+//        "the recognition accuracy and their optimization burden l ecu net al 20 attribute their success");
+//        XL("Abstract How does a user’s prior experience?");
+//
+//        SymSpell symSpell(maxEditDistance, prefixLength);
+//        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+//
+//        auto results = symSpell.WordSegmentation(input, 2, 28);
+//        REQUIRE(results.getSegmented() == output);
+//    }
+
     SECTION("Do Spell Correction") {
         SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
@@ -123,8 +158,8 @@ TEST_CASE("Testing English", "[english]") {
         SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
         symSpell.LoadBigramDictionary("../resources/frequency_bigramdictionary_en_243_342.txt", 0, 2, XL(' '));
-        std::string typo = "the bigjest playrs";
-        std::string correction = "the biggest players";
+        xstring typo = XL("the bigjest playrs");
+        xstring correction = XL("the biggest players");
         auto results = symSpell.LookupCompound(typo, 2);
         REQUIRE(results[0].distance == 2);
     }
@@ -132,8 +167,8 @@ TEST_CASE("Testing English", "[english]") {
     SECTION("Compund mistakes capitals") {
         SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
-        std::string typo = "can yu readthis";
-        std::string correction = "can you read this";
+        xstring typo = XL("can yu readthis");
+        xstring correction = XL("can you read this");
         auto results = symSpell.LookupCompound(typo, 2);
         REQUIRE(results[0].term == correction);
     }

@@ -19,6 +19,8 @@ graft cmake
 prune docs
 prune cmake-build*
 prune build
+prune resources/*.png
+prune resources/*.txt
 
 global-exclude *.py[cod]
 global-exclude *.git

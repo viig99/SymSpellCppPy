@@ -114,7 +114,7 @@ namespace symspellcpppy {
         return true;
     }
 
-    bool SymSpell::DeleteDictionaryEntry(const std::string &key) {
+    bool SymSpell::DeleteDictionaryEntry(const xstring &key) {
         auto wordsFinded = words.find(key);
         if (wordsFinded != words.end()) {
             words.erase(wordsFinded);
@@ -442,7 +442,9 @@ namespace symspellcpppy {
         std::vector<xstring> matches;
         xstring::const_iterator ptr(text.cbegin());
         while (regex_search(ptr, text.cend(), m, r)) {
-            matches.push_back(m[0]);
+            xstring matchLower = m[0];
+            std::transform(matchLower.begin(), matchLower.end(), matchLower.begin(), to_xlower);
+            matches.push_back(matchLower);
             ptr = m.suffix().first;
         }
         return matches;
@@ -674,16 +676,16 @@ namespace symspellcpppy {
                 //v6.7
                 //Lookup against the lowercase term
                 auto partLower = part;
-                std::transform(part.begin(), part.end(), partLower.begin(), ::tolower);
+                std::transform(part.begin(), part.end(), partLower.begin(), to_xlower);
                 std::vector<SuggestItem> results = Lookup(partLower, Top, maxEditDistance);
                 if (!results.empty()) {
                     topResult = results[0].term;
 
                     //v6.7
                     //retain/preserve upper case
-                    if (std::isupper(part[0]))
+                    if (is_xupper(part[0]))
                     {
-                        topResult[0] = std::toupper(topResult[0]);
+                        topResult[0] = to_xupper(topResult[0]);
                     }
 
 
@@ -711,8 +713,8 @@ namespace symspellcpppy {
                            || (circular_distance + separatorLength + topEd < destination_distance)) {
                     //v6.7
                     //keep punctuation or spostrophe adjacent to previous word
-                    if (((topResult.size() == 1) && std::ispunct(topResult[0])) || ((topResult.size() == 2) &&
-                                                                                          topResult.rfind("’", 0) == 0)) {
+                    if (((topResult.size() == 1) && (is_xpunct(topResult[0]) > 0)) || ((topResult.size() == 2) &&
+                                                                                          (topResult.rfind(XL("’"), 0) == 0))) {
                         xstring seg = compositions[circularIndex].getSegmented() + part;
                         xstring correct = compositions[circularIndex].getCorrected() + topResult;
                         int d = circular_distance        + topEd;
