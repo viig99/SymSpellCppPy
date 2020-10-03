@@ -13,6 +13,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         cls.dictionary_path = "resources/frequency_dictionary_en_82_765.txt"
         cls.bigram_path = "resources/frequency_bigramdictionary_en_243_342.txt"
 
+    
     def test_negative_max_dictionary_edit_distance(self):
         self.assertRaisesRegex(ValueError, ".*max_dictionary_edit_distance cannot be negative.*",
                                SymSpell, -1, 3)
@@ -170,7 +171,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         sym_spell = SymSpell(2, 7, 10)
         sym_spell.create_dictionary_entry("flame", 20)
         sym_spell.create_dictionary_entry("flam", 1)
-        result = sym_spell.lookup("flam", Verbosity.TOP, 0, True)
+        result = sym_spell.lookup("flam", Verbosity.TOP, 0, True,False)
         self.assertEqual(1, len(result))
         self.assertEqual("flam", result[0].term)
 
@@ -555,7 +556,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         sym_spell_2 = SymSpell(edit_distance_max, prefix_length)
         sym_spell_2.load_pickle(pickle_path)
         self.assertEqual(sym_spell.max_length(), sym_spell_2.max_length())
-        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True)[0].term, sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
+        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True,False)[0].term, sym_spell_2.lookup("flam", Verbosity.TOP, 0, True,False)[0].term)
         os.remove(pickle_path)
 
     def test_delete_dictionary_entry(self):
@@ -665,6 +666,13 @@ class SymSpellCppPyTests(unittest.TestCase):
         os.rmdir("temp")
         assert (before_save == after_load)
         assert (before_max_length == after_max_length)
+    
+    def test_lookup_include_transfer_casing(self):
+        sym_spell = SymSpell(2, 7, 10)
+        sym_spell.create_dictionary_entry("FLAME", 20)
+        result = sym_spell.lookup("flame", Verbosity.CLOSEST, 0, True,True)
+        self.assertEqual(1, len(result))
+        self.assertEqual("flame", result[0].term)
 
 
 if __name__ == '__main__':

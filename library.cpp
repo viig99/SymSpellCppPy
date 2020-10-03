@@ -272,17 +272,21 @@ namespace symspellcpppy {
     }
 
     std::vector<SuggestItem> SymSpell::Lookup(xstring input, Verbosity verbosity) {
-        return Lookup(std::move(input), verbosity, maxDictionaryEditDistance, false);
+        return Lookup(std::move(input), verbosity, maxDictionaryEditDistance, false, false);
     }
 
     std::vector<SuggestItem> SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance) {
-        return Lookup(std::move(input), verbosity, maxEditDistance, false);
+        return Lookup(std::move(input), verbosity, maxEditDistance, false,false);
     }
 
     std::vector<SuggestItem>
-    SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown) {
+    SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown,bool transfer_casing) {
         int skip = 0;
         if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("Distance too large");
+        
+        if(transfer_casing){
+            std::transform(input.begin(), input.end(), input.begin(), to_xlower);
+        }
 
         std::vector<SuggestItem> suggestions;
         int inputLen = input.size();
@@ -488,7 +492,7 @@ namespace symspellcpppy {
         }
 
         hash &= compactMask;
-        hash |= (uint) lenMask;
+        hash |= (unsigned int) lenMask;
         return (int) hash;
     }
 
