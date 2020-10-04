@@ -9,6 +9,29 @@
 #include <sys/stat.h>
 #include "iostream"
 #include "Defines.h"
+#define DIFFLIB_ENABLE_EXTERN_MACROS
+#include <difflib.h>
+
+DIFFLIB_INSTANTIATE_FOR_TYPE(xstring);
+
+class DifflibOptions {
+public:
+    enum Value : uint8_t {
+        INSERT,
+        DELETE,
+        EQUAL,
+        REPLACE};
+
+    static const Value getType(std::string type) {
+        const std::map<std::string, Value> optionStrings {
+                { "insert", Value::INSERT },
+                { "delete", Value::DELETE },
+                { "equal", Value::EQUAL },
+                { "replace", Value::REPLACE },
+        };
+        return optionStrings.at(type);
+    }
+};
 
 class Helpers {
 public:
@@ -56,9 +79,107 @@ public:
             return -1;
     }
 
+    static xstring string_lower(xstring a) {
+        xstring a_lower = a;
+        std::transform(a.begin(), a.end(), a_lower.begin(), to_xlower);
+        return a_lower;
+    }
+
+    static xstring string_upper(xstring a) {
+        xstring a_upper = a;
+        std::transform(a.begin(), a.end(), a_upper.begin(), to_xupper);
+        return a_upper;
+    }
+
     static bool file_exists (const std::string& name) {
         struct stat buffer;
         return (stat (name.c_str(), &buffer) == 0);
+    }
+
+    static xstring transfer_casing_for_matching_text(const xstring& text_w_casing, const xstring& text_wo_casing) {
+        if (text_w_casing.size() != text_wo_casing.size()) {
+            throw std::invalid_argument("The 'text_w_casing' and 'text_wo_casing' "
+                                        "don't have the same length, "
+                                        "so you can't use them with this method, "
+                                        "you should be using the more general "
+                                        "transfer_casing_similar_text() method.");
+        }
+        xstring response_string;
+        for (int i = 0; i < text_w_casing.size(); ++i) {
+            if (is_xupper(text_w_casing[i])) {
+                response_string += to_xupper(text_wo_casing[i]);
+            } else {
+                response_string += to_xlower(text_wo_casing[i]);
+            }
+        }
+        return response_string;
+    }
+
+    static xstring transfer_casing_for_similar_text(const xstring& text_w_casing, const xstring& text_wo_casing) {
+        if (text_wo_casing.empty()) {
+            return text_wo_casing;
+        }
+        if (text_w_casing.empty()) {
+            throw std::invalid_argument("We need 'text_w_casing' to know what casing to transfer!");
+        }
+
+        auto foo = difflib::MakeSequenceMatcher(string_lower(text_w_casing), text_wo_casing);
+        xstring response_string;
+
+        for (auto const& opcode : foo.get_opcodes()) {
+            std::string tag;
+            size_t i1, i2, j1, j2;
+            std::tie(tag, i1, i2, j1, j2) = opcode;
+            xstring _w_casing, _wo_casing, _last;
+            int _max_length;
+            switch (DifflibOptions::getType(tag)) {
+                case DifflibOptions::Value::INSERT:
+                    if (i1 == 0 or (text_w_casing[i1 - 1] == ' ')) {
+                        if (text_w_casing[i1] and is_xupper(text_w_casing[i1])) {
+                            response_string += string_upper(text_wo_casing.substr(j1, j2 - j1));
+                        } else {
+                            response_string += string_lower(text_wo_casing.substr(j1, j2 - j1));
+                        }
+                    } else {
+                        if (is_xupper(text_w_casing[i1 - 1])) {
+                            response_string += string_upper(text_wo_casing.substr(j1, j2 - j1));
+                        } else {
+                            response_string += string_lower(text_wo_casing.substr(j1, j2 - j1));
+                        }
+                    }
+                    break;
+                case DifflibOptions::Value::DELETE:
+                    break;
+                case DifflibOptions::Value::REPLACE:
+                    _w_casing = text_w_casing.substr(i1, i2-i1);
+                    _wo_casing = text_wo_casing.substr(j1, j2-j1);
+                    if (_w_casing.size() == _wo_casing.size()) {
+                        response_string += transfer_casing_for_matching_text(_w_casing, _wo_casing);
+                    } else {
+                        _last = XL("lower");
+                        _max_length = std::max(_w_casing.size(), _wo_casing.size());
+                        for (int i = 0; i < _max_length; ++i) {
+                            if (i < _w_casing.size()) {
+                                if (is_xupper(_w_casing[i])) {
+                                    response_string += to_xupper(_wo_casing[i]);
+                                    _last = "upper";
+                                } else {
+                                    response_string += to_xlower(_wo_casing[i]);
+                                    _last = "lower";
+                                }
+                            } else {
+                                response_string += (_last == "upper") ? to_xupper(_wo_casing[i]) : to_xlower(_wo_casing[i]);
+                            }
+                        }
+                    }
+                    break;
+                case DifflibOptions::Value::EQUAL :
+                    response_string += text_w_casing.substr(i1, i2-i1);
+                    break;
+            }
+        }
+
+        return response_string;
     }
 };
 

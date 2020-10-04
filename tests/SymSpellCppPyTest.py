@@ -13,7 +13,6 @@ class SymSpellCppPyTests(unittest.TestCase):
         cls.dictionary_path = "resources/frequency_dictionary_en_82_765.txt"
         cls.bigram_path = "resources/frequency_bigramdictionary_en_243_342.txt"
 
-    
     def test_negative_max_dictionary_edit_distance(self):
         self.assertRaisesRegex(ValueError, ".*max_dictionary_edit_distance cannot be negative.*",
                                SymSpell, -1, 3)
@@ -171,7 +170,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         sym_spell = SymSpell(2, 7, 10)
         sym_spell.create_dictionary_entry("flame", 20)
         sym_spell.create_dictionary_entry("flam", 1)
-        result = sym_spell.lookup("flam", Verbosity.TOP, 0, True,False)
+        result = sym_spell.lookup("flam", Verbosity.TOP, 0, True)
         self.assertEqual(1, len(result))
         self.assertEqual("flam", result[0].term)
 
@@ -250,7 +249,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         result_sum = 0
         for phrase in test_list:
             result_sum += len(self.symSpell.lookup(phrase, verbosity,
-                                               edit_distance_max))
+                                                   edit_distance_max))
         self.assertEqual(4945, result_sum)
 
     def test_lookup_compound(self):
@@ -556,7 +555,8 @@ class SymSpellCppPyTests(unittest.TestCase):
         sym_spell_2 = SymSpell(edit_distance_max, prefix_length)
         sym_spell_2.load_pickle(pickle_path)
         self.assertEqual(sym_spell.max_length(), sym_spell_2.max_length())
-        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True,False)[0].term, sym_spell_2.lookup("flam", Verbosity.TOP, 0, True,False)[0].term)
+        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True)[0].term,
+                         sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
         os.remove(pickle_path)
 
     def test_delete_dictionary_entry(self):
@@ -610,7 +610,6 @@ class SymSpellCppPyTests(unittest.TestCase):
     # TODO: test_lookup_compound_ignore_non_words_no_bigram
     # TODO: test_word_segmentation_ignore_token
     # TODO: test_word_segmentation_ligature
-    # TODO: test_lookup_transfer_casing
     # TODO: test_lookup_compound_transfer_casing
     # TODO: test_lookup_compound_transfer_casing_no_bigram
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords
@@ -666,13 +665,31 @@ class SymSpellCppPyTests(unittest.TestCase):
         os.rmdir("temp")
         assert (before_save == after_load)
         assert (before_max_length == after_max_length)
-    
-    def test_lookup_include_transfer_casing(self):
-        sym_spell = SymSpell(2, 7, 10)
-        sym_spell.create_dictionary_entry("FLAME", 20)
-        result = sym_spell.lookup("flame", Verbosity.CLOSEST, 0, True,True)
-        self.assertEqual(1, len(result))
-        self.assertEqual("flame", result[0].term)
+
+    def test_lookup_transfer_casing(self):
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("steam", 4)
+        result = sym_spell.lookup("Stream", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("Steam", result[0].term)
+
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("steam", 4)
+        result = sym_spell.lookup("StreaM", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("SteaM", result[0].term)
+
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("steam", 4)
+        result = sym_spell.lookup("STREAM", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("STEAM", result[0].term)
+
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("i", 4)
+        result = sym_spell.lookup("I", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("I", result[0].term)
 
 
 if __name__ == '__main__':

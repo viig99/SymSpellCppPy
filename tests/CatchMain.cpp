@@ -172,4 +172,13 @@ TEST_CASE("Testing English", "[english]") {
         auto results = symSpell.LookupCompound(typo, 2);
         REQUIRE(results[0].term == correction);
     }
+
+    SECTION("Lookup transfer casing") {
+        SymSpell symSpell(maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        xstring typo = XL("meMberSa");
+        xstring correction = XL("meMberS");
+        auto results = symSpell.Lookup(typo, Verbosity::Top, 2, false, true);
+        REQUIRE(results[0].term == correction);
+    }
 }
