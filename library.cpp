@@ -287,12 +287,12 @@ namespace symspellcpppy {
 
     std::vector<SuggestItem>
     SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown,
-                     bool transfer_casing) {
+                     bool transferCasing) {
         int skip = 0;
         xstring original_phrase;
         if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("Distance too large");
 
-        if (transfer_casing) {
+        if (transferCasing) {
             original_phrase = input;
             input = Helpers::string_lower(input);
         }
@@ -304,7 +304,7 @@ namespace symspellcpppy {
         int64_t suggestionCount = 0;
         if (words.count(input) && !skip) {
             suggestionCount = words.at(input);
-            suggestions.emplace_back(transfer_casing ? original_phrase : input, 0, suggestionCount);
+            suggestions.emplace_back(transferCasing ? original_phrase : input, 0, suggestionCount);
             if (verbosity != All) skip = 1;
         }
 
@@ -432,7 +432,7 @@ namespace symspellcpppy {
                     return l.CompareTo(r) < 0 ? 1 : 0;
                 });
 
-            if (transfer_casing) {
+            if (transferCasing) {
                 for (auto &suggestion: suggestions) {
                     suggestion.term = Helpers::transfer_casing_for_similar_text(original_phrase, suggestion.term);
                 }
@@ -511,10 +511,14 @@ namespace symspellcpppy {
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input) {
-        return LookupCompound(input, maxDictionaryEditDistance);
+        return LookupCompound(input, maxDictionaryEditDistance, false);
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax) {
+        return LookupCompound(input, editDistanceMax, false);
+    }
+
+    std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing) {
         std::vector<xstring> termList1 = ParseWords(input);
 
         std::vector<SuggestItem> suggestions;     //suggestions for a single term
@@ -635,21 +639,18 @@ namespace symspellcpppy {
             nextTerm:;
         }
 
-        SuggestItem suggestion = SuggestItem();
-
         double count = N;
         xstring s;
         for (const SuggestItem &si : suggestionParts) {
             s += (si.term + XL(" "));
             count *= (double) si.count / (double) N;
         }
-        suggestion.count = (long) count;
         rtrim(s);
-        suggestion.term = s;
-        suggestion.distance = distanceComparer.Compare(input, suggestion.term, MAXINT);
-
+        if (transferCasing) {
+            s = Helpers::transfer_casing_for_similar_text(input, s);
+        }
         std::vector<SuggestItem> suggestionsLine;
-        suggestionsLine.push_back(suggestion);
+        suggestionsLine.emplace_back(s, distanceComparer.Compare(input, s, MAXINT), (long) count);
         return suggestionsLine;
     }
 

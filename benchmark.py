@@ -170,47 +170,59 @@ def test_load_pickle_symspellcpppy(benchmark):
     assert (sym_spell.lookup("tke", VerbosityCpp.CLOSEST)[0].term == "the")
 
 @pytest.mark.benchmark(
-    group="create_entry",
+    group="lookup_transfer_casing",
     min_rounds=100,
     disable_gc=True,
     warmup=False
 )
-def test_create_entry_symspellpy(benchmark):
+def test_lookup_transfer_casing_symspellpy(benchmark):
     sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(sym_spell.create_dictionary_entry, "steama", 2)
+    sym_spell.create_dictionary_entry("steam", 4)
+    result = benchmark(sym_spell.lookup, "StreaM", VerbosityPy.TOP, 2,
+                              transfer_casing=True)
+    assert (result[0].term == "SteaM")
 
 @pytest.mark.benchmark(
-    group="create_entry",
+    group="lookup_transfer_casing",
     min_rounds=100,
     disable_gc=True,
     warmup=False
 )
-def test_create_entry_symspellcpppy(benchmark):
+def test_lookup_transfer_casing_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(sym_spell.create_dictionary_entry, "steama", 2)
+    sym_spell.create_dictionary_entry("steam", 4)
+    result = benchmark(sym_spell.lookup, "StreaM", VerbosityCpp.TOP, 2,
+                              transfer_casing=True)
+    assert (result[0].term == "SteaM")
 
 @pytest.mark.benchmark(
-    group="delete_entry",
+    group="lookup_compund_transfer_casing",
     min_rounds=100,
     disable_gc=True,
     warmup=False
 )
-def test_delete_entry_symspellpy(benchmark):
+def test_lookup_compund_transfer_casing_symspellpy(benchmark):
     sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.create_dictionary_entry("stea", 1)
-    sym_spell.create_dictionary_entry("steama", 2)
-    sym_spell.create_dictionary_entry("steem", 3)
-    benchmark(sym_spell.delete_dictionary_entry, "steama")
+    sym_spell.load_dictionary(dict_path, 0, 1)
+    typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
+            "couqdn'tread in sixthgrade AND ins pired him")
+    correction = ("Whereas the love heaD Dated for much of the past "
+                  "who couldn't read in sixth grade AND inspired him")
+    results = benchmark(sym_spell.lookup_compound, typo, 2, transfer_casing=True)
+    assert (results[0].term == correction)
 
 @pytest.mark.benchmark(
-    group="delete_entry",
+    group="lookup_compund_transfer_casing",
     min_rounds=100,
     disable_gc=True,
     warmup=False
 )
-def test_delete_entry_symspellcpppy(benchmark):
+def test_lookup_compund_transfer_casing_symspellcpppy(benchmark):
     sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.create_dictionary_entry("stea", 1)
-    sym_spell.create_dictionary_entry("steama", 2)
-    sym_spell.create_dictionary_entry("steem", 3)
-    benchmark(sym_spell.delete_dictionary_entry, "steama")
+    sym_spell.load_dictionary(dict_path, 0, 1)
+    typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
+            "couqdn'tread in sixthgrade AND ins pired him")
+    correction = ("Whereas the love heaD Dated for much of the past "
+                  "who couldn't read in sixth grade AND inspired him")
+    results = benchmark(sym_spell.lookup_compound, typo, 2, transfer_casing=True)
+    assert (results[0].term == correction)

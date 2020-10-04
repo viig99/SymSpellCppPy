@@ -602,6 +602,37 @@ class SymSpellCppPyTests(unittest.TestCase):
         self.assertEqual("steama", result[0].term)
         self.assertEqual(len("steama"), sym_spell.max_length())
 
+    def test_lookup_compound_transfer_casing(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+        sym_spell.load_bigram_dictionary(self.bigram_path, 0, 2)
+
+        typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
+                "couqdn'tread in sixthgrade AND ins pired him")
+        correction = ("Where is the love he haD Dated for much of the past "
+                      "who couldn't read in sixth grade AND inspired him")
+
+        results = sym_spell.lookup_compound(typo, edit_distance_max,
+                                            transfer_casing=True)
+        self.assertEqual(correction, results[0].term)
+
+    def test_lookup_compound_transfer_casing_no_bigram(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+
+        typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
+                "couqdn'tread in sixthgrade AND ins pired him")
+        correction = ("Whereas the love heaD Dated for much of the past "
+                      "who couldn't read in sixth grade AND inspired him")
+
+        results = sym_spell.lookup_compound(typo, edit_distance_max,
+                                            transfer_casing=True)
+        self.assertEqual(correction, results[0].term)
+
     # TODO: test_create_dictionary_entry_below_threshold
     # TODO: test_lookup_avoid_exact_match_early_exit
     # TODO: test_lookup_compound_replaced_words
@@ -610,11 +641,8 @@ class SymSpellCppPyTests(unittest.TestCase):
     # TODO: test_lookup_compound_ignore_non_words_no_bigram
     # TODO: test_word_segmentation_ignore_token
     # TODO: test_word_segmentation_ligature
-    # TODO: test_lookup_compound_transfer_casing
-    # TODO: test_lookup_compound_transfer_casing_no_bigram
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords_no_bigram
-    # TODO: Test for lookup and lookup_compound with examples where first character is in capital, this fails currently.
 
     def test_lookup(self):
         self.assertEqual(self.symSpell.lookup("tke", Verbosity.CLOSEST)[0].term, "the")

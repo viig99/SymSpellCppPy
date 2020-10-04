@@ -148,6 +148,13 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("max_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
                  py::arg("include_unknown") = false,
                  py::arg("transfer_casing") = false)
+            .def("lookup_compound", py::overload_cast<const xstring &>(
+                    &symspellcpppy::SymSpell::LookupCompound),
+                 " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
+                 "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
+                 "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
+                 "    3. multiple independent input terms with/without spelling errors",
+                 py::arg("input"))
             .def("lookup_compound", py::overload_cast<const xstring &, int>(
                     &symspellcpppy::SymSpell::LookupCompound),
                  " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
@@ -156,13 +163,15 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  "    3. multiple independent input terms with/without spelling errors",
                  py::arg("input"),
                  py::arg("max_edit_distance"))
-            .def("lookup_compound", py::overload_cast<const xstring &>(
+            .def("lookup_compound", py::overload_cast<const xstring &, int, bool>(
                     &symspellcpppy::SymSpell::LookupCompound),
                  " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
                  "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
                  "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
                  "    3. multiple independent input terms with/without spelling errors",
-                 py::arg("input"))
+                 py::arg("input"),
+                 py::arg("max_edit_distance"),
+                 py::arg("transfer_casing"))
             .def("word_segmentation", py::overload_cast<const xstring &>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  " WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions\n"
