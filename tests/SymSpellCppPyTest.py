@@ -249,7 +249,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         result_sum = 0
         for phrase in test_list:
             result_sum += len(self.symSpell.lookup(phrase, verbosity,
-                                               edit_distance_max))
+                                                   edit_distance_max))
         self.assertEqual(4945, result_sum)
 
     def test_lookup_compound(self):
@@ -555,7 +555,8 @@ class SymSpellCppPyTests(unittest.TestCase):
         sym_spell_2 = SymSpell(edit_distance_max, prefix_length)
         sym_spell_2.load_pickle(pickle_path)
         self.assertEqual(sym_spell.max_length(), sym_spell_2.max_length())
-        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True)[0].term, sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
+        self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True)[0].term,
+                         sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
         os.remove(pickle_path)
 
     def test_delete_dictionary_entry(self):
@@ -601,6 +602,37 @@ class SymSpellCppPyTests(unittest.TestCase):
         self.assertEqual("steama", result[0].term)
         self.assertEqual(len("steama"), sym_spell.max_length())
 
+    def test_lookup_compound_transfer_casing(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+        sym_spell.load_bigram_dictionary(self.bigram_path, 0, 2)
+
+        typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
+                "couqdn'tread in sixthgrade AND ins pired him")
+        correction = ("Where is the love he haD Dated for much of the past "
+                      "who couldn't read in sixth grade AND inspired him")
+
+        results = sym_spell.lookup_compound(typo, edit_distance_max,
+                                            transfer_casing=True)
+        self.assertEqual(correction, results[0].term)
+
+    def test_lookup_compound_transfer_casing_no_bigram(self):
+        edit_distance_max = 2
+        prefix_length = 7
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.load_dictionary(self.dictionary_path, 0, 1)
+
+        typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
+                "couqdn'tread in sixthgrade AND ins pired him")
+        correction = ("Whereas the love heaD Dated for much of the past "
+                      "who couldn't read in sixth grade AND inspired him")
+
+        results = sym_spell.lookup_compound(typo, edit_distance_max,
+                                            transfer_casing=True)
+        self.assertEqual(correction, results[0].term)
+
     # TODO: test_create_dictionary_entry_below_threshold
     # TODO: test_lookup_avoid_exact_match_early_exit
     # TODO: test_lookup_compound_replaced_words
@@ -609,12 +641,8 @@ class SymSpellCppPyTests(unittest.TestCase):
     # TODO: test_lookup_compound_ignore_non_words_no_bigram
     # TODO: test_word_segmentation_ignore_token
     # TODO: test_word_segmentation_ligature
-    # TODO: test_lookup_transfer_casing
-    # TODO: test_lookup_compound_transfer_casing
-    # TODO: test_lookup_compound_transfer_casing_no_bigram
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords
     # TODO: test_lookup_compound_transfer_casing_ignore_nonwords_no_bigram
-    # TODO: Test for lookup and lookup_compound with examples where first character is in capital, this fails currently.
 
     def test_lookup(self):
         self.assertEqual(self.symSpell.lookup("tke", Verbosity.CLOSEST)[0].term, "the")
@@ -665,6 +693,31 @@ class SymSpellCppPyTests(unittest.TestCase):
         os.rmdir("temp")
         assert (before_save == after_load)
         assert (before_max_length == after_max_length)
+
+    def test_lookup_transfer_casing(self):
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("steam", 4)
+        result = sym_spell.lookup("Stream", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("Steam", result[0].term)
+
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("steam", 4)
+        result = sym_spell.lookup("StreaM", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("SteaM", result[0].term)
+
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("steam", 4)
+        result = sym_spell.lookup("STREAM", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("STEAM", result[0].term)
+
+        sym_spell = SymSpell()
+        sym_spell.create_dictionary_entry("i", 4)
+        result = sym_spell.lookup("I", Verbosity.TOP, 2,
+                                  transfer_casing=True)
+        self.assertEqual("I", result[0].term)
 
 
 if __name__ == '__main__':

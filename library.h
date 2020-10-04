@@ -213,6 +213,16 @@ namespace symspellcpppy {
         /// sorted by edit distance, and secondarily by count frequency.</returns>
         std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
 
+        /// <summary>Find suggested spellings for a given input word.</summary>
+        /// <param name="input">The word being spell checked.</param>
+        /// <param name="verbosity">The value controlling the quantity/closeness of the retuned suggestions.</param>
+        /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
+        /// <param name="includeUnknown">Include input word in suggestions, if no words within edit distance found.</param>
+        /// <param name="transfer_casing"> Lower case the word or not
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
+        /// sorted by edit distance, and secondarily by count frequency.</returns>
+        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown, bool transferCasing);
+
     private:
         bool
         DeleteInSuggestionPrefix(xstring deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
@@ -244,6 +254,12 @@ namespace symspellcpppy {
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input string.</returns>
         std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax);
+
+        /// <summary>Find suggested spellings for a multi-word input string (supports word splitting/merging).</summary>
+        /// <param name="input">The string being spell checked.</param>
+        /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
+        /// <returns>A List of SuggestItem object representing suggested correct spellings for the input string.</returns>
+        std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing);
 
         //######
 

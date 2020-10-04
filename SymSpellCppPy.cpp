@@ -24,13 +24,19 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("corrected_string"),
                  py::arg("distance_sum"), py::arg("log_prob_sum"))
             .def("get_segmented", &symspellcpppy::Info::getSegmented, "The word segmented string.")
-            .def("get_corrected", &symspellcpppy::Info::getCorrected, "The word segmented and spelling corrected string.")
-            .def("get_distance", &symspellcpppy::Info::getDistance,  "The Edit distance sum between input string and corrected string.")
-            .def("get_probability", &symspellcpppy::Info::getProbability, "The Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).")
+            .def("get_corrected", &symspellcpppy::Info::getCorrected,
+                 "The word segmented and spelling corrected string.")
+            .def("get_distance", &symspellcpppy::Info::getDistance,
+                 "The Edit distance sum between input string and corrected string.")
+            .def("get_probability", &symspellcpppy::Info::getProbability,
+                 "The Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).")
             .def_property_readonly("segmented_string", &symspellcpppy::Info::getSegmented, "The word segmented string.")
-            .def_property_readonly("corrected_string", &symspellcpppy::Info::getCorrected, "The word segmented and spelling corrected string.")
-            .def_property_readonly("distance_sum", &symspellcpppy::Info::getDistance,  "The Edit distance sum between input string and corrected string.")
-            .def_property_readonly("log_prob_sum", &symspellcpppy::Info::getProbability, "The Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).")
+            .def_property_readonly("corrected_string", &symspellcpppy::Info::getCorrected,
+                                   "The word segmented and spelling corrected string.")
+            .def_property_readonly("distance_sum", &symspellcpppy::Info::getDistance,
+                                   "The Edit distance sum between input string and corrected string.")
+            .def_property_readonly("log_prob_sum", &symspellcpppy::Info::getProbability,
+                                   "The Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).")
             .def("__repr__",
                  [](const symspellcpppy::Info &a) {
                      return "<Info corrected string ='" + a.getCorrected() + "'>";
@@ -56,13 +62,18 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  }
             )
             .def_readwrite("term", &SuggestItem::term, "The suggested correctly spelled word.")
-            .def_readwrite("distance", &SuggestItem::distance, "Edit distance between searched for word and suggestion.")
-            .def_readwrite("count", &SuggestItem::count, "Frequency of suggestion in the dictionary (a measure of how common the word is).");
+            .def_readwrite("distance", &SuggestItem::distance,
+                           "Edit distance between searched for word and suggestion.")
+            .def_readwrite("count", &SuggestItem::count,
+                           "Frequency of suggestion in the dictionary (a measure of how common the word is).");
 
     py::enum_<symspellcpppy::Verbosity>(m, "Verbosity")
-            .value("TOP", symspellcpppy::Verbosity::Top, "The suggestion with the highest term frequency of the suggestions of smallest edit distance found.")
-            .value("CLOSEST", symspellcpppy::Verbosity::Closest, "All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.")
-            .value("ALL", symspellcpppy::Verbosity::All, "All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (slower, no early termination).")
+            .value("TOP", symspellcpppy::Verbosity::Top,
+                   "The suggestion with the highest term frequency of the suggestions of smallest edit distance found.")
+            .value("CLOSEST", symspellcpppy::Verbosity::Closest,
+                   "All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.")
+            .value("ALL", symspellcpppy::Verbosity::All,
+                   "All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (slower, no early termination).")
             .export_values();
 
     py::class_<symspellcpppy::SymSpell>(m, "SymSpell")
@@ -76,10 +87,11 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
             .def("word_count", &symspellcpppy::SymSpell::WordCount, "Number of words entered.")
             .def("max_length", &symspellcpppy::SymSpell::MaxLength, "Max length of words entered.")
             .def("entry_count", &symspellcpppy::SymSpell::EntryCount, "Total number of deletes formed.")
-            .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold, "Frequency of word so that its considered a valid word for spelling correction.")
+            .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold,
+                 "Frequency of word so that its considered a valid word for spelling correction.")
             .def("create_dictionary_entry", [](symspellcpppy::SymSpell &sym, const xstring &key, int64_t count) {
                 auto staging = std::make_shared<SuggestionStage>(128);
-                sym.CreateDictionaryEntry(key, count, staging);
+                sym.CreateDictionaryEntry(Helpers::string_lower(key), count, staging);
                 sym.CommitStaged(staging);
                 return sym.EntryCount() > 0;
             }, "Create/Update an entry in the dictionary.", py::arg("key"), py::arg("count"))
@@ -127,6 +139,22 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  py::arg("verbosity"),
                  py::arg("max_edit_distance"),
                  py::arg("include_unknown"))
+            .def("lookup", py::overload_cast<xstring, symspellcpppy::Verbosity, int, bool, bool>(
+                    &symspellcpppy::SymSpell::Lookup),
+                 " Find suggested spellings for a given input word, using the maximum\n"
+                 "    edit distance provided to the function and include input word in suggestions, if no words within edit distance found & preserve transfer casing.",
+                 py::arg("input"),
+                 py::arg("verbosity"),
+                 py::arg("max_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
+                 py::arg("include_unknown") = false,
+                 py::arg("transfer_casing") = false)
+            .def("lookup_compound", py::overload_cast<const xstring &>(
+                    &symspellcpppy::SymSpell::LookupCompound),
+                 " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
+                 "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
+                 "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
+                 "    3. multiple independent input terms with/without spelling errors",
+                 py::arg("input"))
             .def("lookup_compound", py::overload_cast<const xstring &, int>(
                     &symspellcpppy::SymSpell::LookupCompound),
                  " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
@@ -135,13 +163,15 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  "    3. multiple independent input terms with/without spelling errors",
                  py::arg("input"),
                  py::arg("max_edit_distance"))
-            .def("lookup_compound", py::overload_cast<const xstring &>(
+            .def("lookup_compound", py::overload_cast<const xstring &, int, bool>(
                     &symspellcpppy::SymSpell::LookupCompound),
                  " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
                  "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
                  "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
                  "    3. multiple independent input terms with/without spelling errors",
-                 py::arg("input"))
+                 py::arg("input"),
+                 py::arg("max_edit_distance"),
+                 py::arg("transfer_casing"))
             .def("word_segmentation", py::overload_cast<const xstring &>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  " WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions\n"

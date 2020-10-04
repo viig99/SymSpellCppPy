@@ -37,3 +37,4 @@
 *build*/
 cleanup.sh
 dist/
+.vscode/
