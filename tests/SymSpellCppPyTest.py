@@ -615,7 +615,7 @@ class SymSpellCppPyTests(unittest.TestCase):
                       "who couldn't read in sixth grade AND inspired him")
 
         results = sym_spell.lookup_compound(typo, edit_distance_max,
-                                            transfer_casing=True)
+                                            transfer_casing=True,ignore_non_words=True)
         self.assertEqual(correction, results[0].term)
 
     def test_lookup_compound_transfer_casing_no_bigram(self):
