@@ -401,9 +401,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         results = sym_spell.lookup_compound(typo, edit_distance_max)
         self.assertEqual(1, len(results))
         self.assertEqual(correction, results[0].term)
-
-    def test_lookup_compound_numbers_accr(self)
-    
+        
     def test_lookup_compound_no_suggestion(self):
         edit_distance_max = 2
         prefix_length = 7
@@ -720,7 +718,12 @@ class SymSpellCppPyTests(unittest.TestCase):
         result = sym_spell.lookup("I", Verbosity.TOP, 2,
                                   transfer_casing=True)
         self.assertEqual("I", result[0].term)
-
+    
+    def test_lookup_compund_acr(self):
+        symSpell = SymSpell()
+        symSpell.load_dictionary("resources/frequency_dictionary_en_82_765.txt", 0, 1, " ")
+        res = symSpell.lookup_compound("Wht is yur PNR numbir")
+        self.assertEqual("What is your PNR number",res[0].term)
 
 if __name__ == '__main__':
     unittest.main()

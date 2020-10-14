@@ -252,7 +252,7 @@ namespace symspellcpppy {
         xstring line;
         auto staging = std::make_shared<SuggestionStage>(16384);
         while (getline(corpusStream, line)) {
-            for (const xstring &key : ParseWords(line)) {
+            for (const xstring &key : ParseWords(line,true)) {
                 CreateDictionaryEntry(key, 1, staging);
             }
 
@@ -455,26 +455,19 @@ namespace symspellcpppy {
         return true;
     }
 
-    std::vector<xstring> SymSpell::ParseWords(const xstring &text) {
+    std::vector<xstring> SymSpell::ParseWords(const xstring &text,bool lower_casing=true) {
         xregex r(XL("['’\\w-\\[_\\]]+"));
         xsmatch m;
         std::vector<xstring> matches;
         xstring::const_iterator ptr(text.cbegin());
         while (regex_search(ptr, text.cend(), m, r)) {
-            xstring matchLower = Helpers::string_lower(m[0]);
-            matches.push_back(matchLower);
-            ptr = m.suffix().first;
-        }
-        return matches;
-    }
-
-    std::vector<xstring> SymSpell::ParseWordsPreserveCasing(const xstring &text) {
-        xregex r(XL("['’\\w-\\[_\\]]+"));
-        xsmatch m;
-        std::vector<xstring> matches;
-        xstring::const_iterator ptr(text.cbegin());
-        while (regex_search(ptr, text.cend(), m, r)) {
-            matches.push_back(m[0]);
+            if(lower_casing){
+                xstring matchLower = Helpers::string_lower(m[0]);
+                matches.push_back(matchLower);
+            }
+            else{
+                matches.push_back(m[0]);
+            }
             ptr = m.suffix().first;
         }
         return matches;
@@ -531,7 +524,7 @@ namespace symspellcpppy {
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax,bool transferCasing,bool ignore_non_words) {
-        std::vector<xstring> termList1 = ParseWordsPreserveCasing(input);
+        std::vector<xstring> termList1 = ParseWords(input,false);
 
         std::vector<SuggestItem> suggestions;     //suggestions for a single term
         std::vector<SuggestItem> suggestionParts; //1 line with separate parts

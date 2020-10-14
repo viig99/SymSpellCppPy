@@ -190,5 +190,14 @@ TEST_CASE("Testing English", "[english]") {
         auto results = symSpell.LookupCompound(typo);
         REQUIRE(results[0].term == correction);
     }
+
+    SECTION("Lookup compound with just numbers") {
+        SymSpell symSpell(maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        xstring typo = "whera is the 999 locaited";
+        xstring correction = "where is the 999 located";
+        auto results = symSpell.LookupCompound(typo);
+        REQUIRE(results[0].term == correction);
+    }
     
 }

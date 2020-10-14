@@ -227,9 +227,7 @@ namespace symspellcpppy {
         bool
         DeleteInSuggestionPrefix(xstring deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
 
-        static std::vector<xstring> ParseWords(const xstring &text);
-
-        static std::vector<xstring> ParseWordsPreserveCasing(const xstring &text);
+        static std::vector<xstring> ParseWords(const xstring &text, bool lower_casing);
 
         std::shared_ptr<std::unordered_set<xstring>>
         Edits(const xstring &word, int editDistance, std::shared_ptr<std::unordered_set<xstring>> deleteWords);
