@@ -163,7 +163,7 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  "    3. multiple independent input terms with/without spelling errors",
                  py::arg("input"),
                  py::arg("max_edit_distance"))
-            .def("lookup_compound", py::overload_cast<const xstring &, int, bool>(
+            .def("lookup_compound", py::overload_cast<const xstring &, int, bool,bool>(
                     &symspellcpppy::SymSpell::LookupCompound),
                  " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
                  "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
@@ -171,7 +171,8 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                  "    3. multiple independent input terms with/without spelling errors",
                  py::arg("input"),
                  py::arg("max_edit_distance"),
-                 py::arg("transfer_casing"))
+                 py::arg("transfer_casing"),
+                 py::arg("ignore_non_words"))
             .def("word_segmentation", py::overload_cast<const xstring &>(
                     &symspellcpppy::SymSpell::WordSegmentation),
                  " WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions\n"

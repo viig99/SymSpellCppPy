@@ -402,6 +402,8 @@ class SymSpellCppPyTests(unittest.TestCase):
         self.assertEqual(1, len(results))
         self.assertEqual(correction, results[0].term)
 
+    def test_lookup_compound_numbers_accr(self)
+    
     def test_lookup_compound_no_suggestion(self):
         edit_distance_max = 2
         prefix_length = 7
