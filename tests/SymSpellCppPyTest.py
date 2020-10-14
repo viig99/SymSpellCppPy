@@ -630,7 +630,7 @@ class SymSpellCppPyTests(unittest.TestCase):
                       "who couldn't read in sixth grade AND inspired him")
 
         results = sym_spell.lookup_compound(typo, edit_distance_max,
-                                            transfer_casing=True)
+                                            transfer_casing=True,True)
         self.assertEqual(correction, results[0].term)
 
     # TODO: test_create_dictionary_entry_below_threshold
@@ -722,7 +722,7 @@ class SymSpellCppPyTests(unittest.TestCase):
     def test_lookup_compund_acr(self):
         symSpell = SymSpell()
         symSpell.load_dictionary("resources/frequency_dictionary_en_82_765.txt", 0, 1, " ")
-        res = symSpell.lookup_compound("Wht is yur PNR numbir")
+        res = symSpell.lookup_compound("Whate is yur PNR numbir")
         self.assertEqual("What is your PNR number",res[0].term)
 
 if __name__ == '__main__':
