@@ -630,7 +630,7 @@ class SymSpellCppPyTests(unittest.TestCase):
                       "who couldn't read in sixth grade AND inspired him")
 
         results = sym_spell.lookup_compound(typo, edit_distance_max,
-                                            transfer_casing=True,True)
+                                            True,True)
         self.assertEqual(correction, results[0].term)
 
     # TODO: test_create_dictionary_entry_below_threshold
