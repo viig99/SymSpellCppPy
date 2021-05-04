@@ -212,6 +212,31 @@ PYBIND11_MODULE(SymSpellCppPy, m) {
                          throw std::invalid_argument("Unable to load file from filepath: " + filepath);
                      }
                  }, "Load internal representation from file",
-                 py::arg("filepath"));
+                 py::arg("filepath"))
+            .def("save_pickle_bytes", [](symspellcpppy::SymSpell &sym) {
+                    std::ostringstream binary_stream(std::ios::out | std::ios::binary);
+                    cereal::BinaryOutputArchive ar(binary_stream);
+                    ar(sym);
+
+                    return py::bytes(binary_stream.str());
+                 }, "Save internal representation to bytes")
+            .def("load_pickle_bytes", [](symspellcpppy::SymSpell &sym, py::buffer bytes) {
+                    py::buffer_info buff = bytes.request();
+
+                    if (buff.strides.size() != 1) {
+                         throw std::domain_error("Unable to load buffer: buffer should be 1-dimensional.");
+                    }
+
+                    if (buff.strides[0] != buff.itemsize) {
+                         throw std::domain_error("Unable to load buffer: buffer should be contiguous.");
+                    }
+
+                    std::string const bytes_str(reinterpret_cast<char*>(buff.ptr), buff.size * buff.itemsize);
+                    std::istringstream binary_stream(bytes_str, std::ios::in | std::ios::binary);
+
+                    cereal::BinaryInputArchive ar(binary_stream);
+                    ar(sym);
+                 }, "Load internal representation from buffers, such as 'bytes' and 'memoryview'",
+                 py::arg("bytes"));
 
 }
