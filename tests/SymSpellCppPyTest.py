@@ -559,6 +559,23 @@ class SymSpellCppPyTests(unittest.TestCase):
                          sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
         os.remove(pickle_path)
 
+    def test_pickle_bytes(self):
+        edit_distance_max = 2
+        prefix_length = 7
+
+        sym_spell = SymSpell(edit_distance_max, prefix_length)
+        sym_spell.create_dictionary_entry("test", 123)
+        sym_spell.create_dictionary_entry("ball", 4)
+        sym_spell.create_dictionary_entry("code", 56)
+        sym_bytes = sym_spell.save_pickle_bytes()
+
+        sym_spell_ld = SymSpell(edit_distance_max, prefix_length)
+        sym_spell_ld.load_pickle_bytes(sym_bytes)
+
+        self.assertEqual("test", sym_spell_ld.lookup("tst", Verbosity.CLOSEST)[0].term)
+        self.assertEqual("ball", sym_spell_ld.lookup("boll", Verbosity.CLOSEST)[0].term)
+        self.assertEqual(2, sym_spell_ld.lookup("c0d3", Verbosity.CLOSEST)[0].distance)
+
     def test_delete_dictionary_entry(self):
         sym_spell = SymSpell()
         sym_spell.create_dictionary_entry("stea", 1)
