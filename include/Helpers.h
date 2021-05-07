@@ -181,6 +181,21 @@ public:
 
         return response_string;
     }
+
+    static bool is_acronym(xstring word, bool match_any_term_with_digit){
+        if(match_any_term_with_digit == true){
+            for(char i:word){
+                if(std::isdigit(i)){
+                    return true;
+                }
+            }
+        }
+        std::regex accr_regex("[A-Z0-9]{3,}");
+        if(std::regex_match(word,accr_regex)){
+            return true;
+        }
+        return false;
+    }
 };
 
 template<class T>

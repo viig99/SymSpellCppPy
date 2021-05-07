@@ -252,7 +252,7 @@ namespace symspellcpppy {
         xstring line;
         auto staging = std::make_shared<SuggestionStage>(16384);
         while (getline(corpusStream, line)) {
-            for (const xstring &key : ParseWords(line)) {
+            for (const xstring &key : ParseWords(line,true)) {
                 CreateDictionaryEntry(key, 1, staging);
             }
 
@@ -455,14 +455,19 @@ namespace symspellcpppy {
         return true;
     }
 
-    std::vector<xstring> SymSpell::ParseWords(const xstring &text) {
+    std::vector<xstring> SymSpell::ParseWords(const xstring &text,bool lower_casing=true) {
         xregex r(XL("['’\\w-\\[_\\]]+"));
         xsmatch m;
         std::vector<xstring> matches;
         xstring::const_iterator ptr(text.cbegin());
         while (regex_search(ptr, text.cend(), m, r)) {
-            xstring matchLower = Helpers::string_lower(m[0]);
-            matches.push_back(matchLower);
+            if(lower_casing){
+                xstring matchLower = Helpers::string_lower(m[0]);
+                matches.push_back(matchLower);
+            }
+            else{
+                matches.push_back(m[0]);
+            }
             ptr = m.suffix().first;
         }
         return matches;
@@ -511,15 +516,15 @@ namespace symspellcpppy {
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input) {
-        return LookupCompound(input, maxDictionaryEditDistance, false);
+        return LookupCompound(input, maxDictionaryEditDistance, false,true);
     }
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax) {
-        return LookupCompound(input, editDistanceMax, false);
+        return LookupCompound(input, editDistanceMax, false,true);
     }
 
-    std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing) {
-        std::vector<xstring> termList1 = ParseWords(input);
+    std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax,bool transferCasing,bool ignore_non_words) {
+        std::vector<xstring> termList1 = ParseWords(input,false);
 
         std::vector<SuggestItem> suggestions;     //suggestions for a single term
         std::vector<SuggestItem> suggestionParts; //1 line with separate parts
@@ -527,6 +532,15 @@ namespace symspellcpppy {
 
         bool lastCombi = false;
         for (int i = 0; i < termList1.size(); i++) {
+            if(ignore_non_words == true){
+                if(Helpers::is_acronym(termList1[i],true)){
+                    SuggestItem temp = SuggestItem(termList1[i],0,0);
+                    suggestionParts.push_back(temp);
+                    continue;
+                }
+
+            }
+
             suggestions = Lookup(termList1[i], Top, editDistanceMax);
 
             if ((i > 0) && !lastCombi) {

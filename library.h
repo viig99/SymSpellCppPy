@@ -227,7 +227,7 @@ namespace symspellcpppy {
         bool
         DeleteInSuggestionPrefix(xstring deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
 
-        static std::vector<xstring> ParseWords(const xstring &text);
+        static std::vector<xstring> ParseWords(const xstring &text, bool lower_casing);
 
         std::shared_ptr<std::unordered_set<xstring>>
         Edits(const xstring &word, int editDistance, std::shared_ptr<std::unordered_set<xstring>> deleteWords);
@@ -259,7 +259,7 @@ namespace symspellcpppy {
         /// <param name="input">The string being spell checked.</param>
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input string.</returns>
-        std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing);
+        std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing, bool ignore_non_words);
 
         //######
 

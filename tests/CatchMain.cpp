@@ -172,7 +172,7 @@ TEST_CASE("Testing English", "[english]") {
         auto results = symSpell.LookupCompound(typo, 2);
         REQUIRE(results[0].term == correction);
     }
-
+    
     SECTION("Lookup transfer casing") {
         SymSpell symSpell(maxEditDistance, prefixLength);
         symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
@@ -181,4 +181,23 @@ TEST_CASE("Testing English", "[english]") {
         auto results = symSpell.Lookup(typo, Verbosity::Top, 2, false, true);
         REQUIRE(results[0].term == correction);
     }
+    
+    SECTION("Lookup compound accronyms and numbers") {
+        SymSpell symSpell(maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        xstring typo = "whera is the PNR9 locaited";
+        xstring correction = "where is the PNR9 located";
+        auto results = symSpell.LookupCompound(typo);
+        REQUIRE(results[0].term == correction);
+    }
+
+    SECTION("Lookup compound with just numbers") {
+        SymSpell symSpell(maxEditDistance, prefixLength);
+        symSpell.LoadDictionary("../resources/frequency_dictionary_en_82_765.txt", 0, 1, XL(' '));
+        xstring typo = "whera is the 999 locaited";
+        xstring correction = "where is the 999 located";
+        auto results = symSpell.LookupCompound(typo);
+        REQUIRE(results[0].term == correction);
+    }
+    
 }
