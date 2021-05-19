@@ -45,7 +45,7 @@ public:
         return (string1.empty() && string2.empty()) ? 1 : (0 <= minSimilarity) ? 0 : -1;
     }
 
-    static void PrefixSuffixPrep(xstring string1, xstring string2, int &len1, int &len2, int &start) {
+    static void PrefixSuffixPrep(const xstring& string1, const xstring& string2, int &len1, int &len2, int &start) {
         len2 = string2.size();
         len1 = string1.size(); // this is also the minimum length of the two strings
         // suffix common to both strings can be ignored
@@ -79,13 +79,13 @@ public:
             return -1;
     }
 
-    static xstring string_lower(xstring a) {
+    static xstring string_lower(const xstring& a) {
         xstring a_lower = a;
         std::transform(a.begin(), a.end(), a_lower.begin(), to_xlower);
         return a_lower;
     }
 
-    static xstring string_upper(xstring a) {
+    static xstring string_upper(const xstring& a) {
         xstring a_upper = a;
         std::transform(a.begin(), a.end(), a_upper.begin(), to_xupper);
         return a_upper;

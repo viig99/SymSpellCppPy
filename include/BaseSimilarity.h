@@ -9,7 +9,7 @@
 
 class BaseSimilarity {
 public:
-    virtual double Similarity(xstring string1, xstring string2) = 0;
+    virtual double Similarity(const xstring& string1, const xstring& string2) = 0;
 
-    virtual double Similarity(xstring string1, xstring string2, double minSimilarity) = 0;
+    virtual double Similarity(const xstring& string1, const xstring& string2, double minSimilarity) = 0;
 };

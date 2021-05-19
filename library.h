@@ -193,7 +193,7 @@ namespace symspellcpppy {
         /// <param name="verbosity">The value controlling the quantity/closeness of the retuned suggestions.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity);
+        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity);
 
         /// <summary>Find suggested spellings for a given input word, using the maximum
         /// edit distance specified during construction of the SymSpell dictionary.</summary>
@@ -202,7 +202,7 @@ namespace symspellcpppy {
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance);
+        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity, int maxEditDistance);
 
         /// <summary>Find suggested spellings for a given input word.</summary>
         /// <param name="input">The word being spell checked.</param>
@@ -211,7 +211,7 @@ namespace symspellcpppy {
         /// <param name="includeUnknown">Include input word in suggestions, if no words within edit distance found.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
+        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
 
         /// <summary>Find suggested spellings for a given input word.</summary>
         /// <param name="input">The word being spell checked.</param>
@@ -221,20 +221,20 @@ namespace symspellcpppy {
         /// <param name="transfer_casing"> Lower case the word or not
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown, bool transferCasing);
+        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity, int maxEditDistance, bool includeUnknown, bool transferCasing);
 
     private:
         bool
-        DeleteInSuggestionPrefix(xstring deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
+        DeleteInSuggestionPrefix(const xstring& deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
 
         static std::vector<xstring> ParseWords(const xstring &text);
 
         std::shared_ptr<std::unordered_set<xstring>>
         Edits(const xstring &word, int editDistance, std::shared_ptr<std::unordered_set<xstring>> deleteWords);
 
-        std::shared_ptr<std::unordered_set<xstring>> EditsPrefix(xstring key);
+        std::shared_ptr<std::unordered_set<xstring>> EditsPrefix(const xstring& key);
 
-        int GetstringHash(xstring s) const;
+        int GetstringHash(const xstring& s) const;
 
     public:
         //######################
