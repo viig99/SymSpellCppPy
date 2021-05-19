@@ -27,7 +27,7 @@ namespace symspellcpppy {
     }
 
     int SymSpell::EntryCount() {
-        return deletes->size();
+        return deletes == nullptr ? 0 : deletes->size();
     }
 
     SymSpell::SymSpell(int _maxDictionaryEditDistance, int _prefixLength, int _countThreshold, int _initialCapacity,
@@ -288,6 +288,8 @@ namespace symspellcpppy {
     std::vector<SuggestItem>
     SymSpell::Lookup(xstring input, Verbosity verbosity, int maxEditDistance, bool includeUnknown,
                      bool transferCasing) {
+        if (deletes == nullptr) return {}; // Dictionary is empty
+
         int skip = 0;
         xstring original_phrase;
         if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("Distance too large");
