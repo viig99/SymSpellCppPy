@@ -736,6 +736,9 @@ class SymSpellCppPyTests(unittest.TestCase):
                                   transfer_casing=True)
         self.assertEqual("I", result[0].term)
 
+    def test_empty_deletes(self):
+        self.assertEqual(SymSpell(2).lookup("ab", Verbosity.CLOSEST), [])
+        self.assertEqual(SymSpell().entry_count(), 0)
 
 if __name__ == '__main__':
     unittest.main()
