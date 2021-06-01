@@ -78,7 +78,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='SymSpellCppPy',
-    version='0.0.13',
+    version='0.0.14',
     author='Arjun Variar & Mohit Tare',
     author_email='accio.arjun@gmail.com',
     description='A Fast SymSpell port for python written in C++ using pybind11.',
