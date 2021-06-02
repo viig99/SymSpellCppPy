@@ -17,6 +17,7 @@ pip install --upgrade SymSpellCppPy
 * Check `tests/SymSpellCppPyTest.py` for extended api usage.
 
 ## Benchmark Results
+Run on AMD 5900x
 ```shell script
 pip install pytest pytest-benchmark symspellpy SymSpellCppPy
 pytest benchmark.py --benchmark-compare
