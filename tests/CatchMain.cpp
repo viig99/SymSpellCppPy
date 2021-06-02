@@ -135,6 +135,7 @@ TEST_CASE("Testing English", "[english]") {
                                 DEFAULT_COMPACT_LEVEL);
         auto staging = std::make_shared<SuggestionStage>(100);
         symSpellcustom.CreateDictionaryEntry(XL("take"), 4, staging);
+        symSpellcustom.CommitStaged(staging);
         auto results = symSpellcustom.Lookup(XL("take"), Verbosity::Closest, 2);
         REQUIRE(XL("take") == results[0].term);
     }

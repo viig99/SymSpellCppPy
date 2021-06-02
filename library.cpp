@@ -287,7 +287,7 @@ namespace symspellcpppy {
     std::vector<SuggestItem>
     SymSpell::Lookup(const xstring& original_input, Verbosity verbosity, int maxEditDistance, bool includeUnknown,
                      bool transferCasing) {
-        if (deletes == nullptr) return {}; // Dictionary is empty
+        if (deletes == nullptr) return std::vector<SuggestItem> {}; // Dictionary is empty
 
         int skip = 0;
         if (maxEditDistance > maxDictionaryEditDistance) throw std::invalid_argument("Distance too large");
