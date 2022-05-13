@@ -459,7 +459,7 @@ namespace symspellcpppy {
     }
 
     std::vector<xstring> SymSpell::ParseWords(const xstring &text) {
-        xregex r(XL("['’\\w-\\[_\\]]+"));
+        xregex r(XL("['’\\w\\-\\[_\\]]+"));
         xsmatch m;
         std::vector<xstring> matches;
         xstring::const_iterator ptr(text.cbegin());
