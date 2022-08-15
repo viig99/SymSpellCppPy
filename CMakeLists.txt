@@ -25,7 +25,8 @@ if (BUILD_FOR_PYTHON)
     target_sources(SymSpellCppPy PRIVATE library.cpp library.h)
     target_link_libraries(SymSpellCppPy PRIVATE SymSpellCpp)
     target_compile_options(SymSpellCppPy PRIVATE
-            $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -mtune=native -fvisibility=hidden -flto>)
+            $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -mtune=native -fvisibility=hidden
+            -flto -ffat-lto-objects>)
     message(STATUS "Build for Python = " ${BUILD_FOR_PYTHON})
 else ()
     Include(FetchContent)
