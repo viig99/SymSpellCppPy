@@ -19,7 +19,7 @@ if (BUILD_FOR_PYTHON)
     FetchContent_Declare(
             pybind11
             GIT_REPOSITORY https://github.com/pybind/pybind11.git
-            GIT_TAG v2.5.0)
+            GIT_TAG v2.10.1)
     FetchContent_MakeAvailable(pybind11)
     pybind11_add_module(SymSpellCppPy MODULE SymSpellCppPy.cpp)
     target_sources(SymSpellCppPy PRIVATE library.cpp library.h)
