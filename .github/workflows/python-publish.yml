@@ -24,7 +24,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: Get tags
-      run: git fetch --tags origin
+      run: git fetch --tags
+    - name: Checkout latest tag
+      run: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
