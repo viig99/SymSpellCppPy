@@ -9,6 +9,7 @@ import subprocess
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
+import versioneer
 
 from os import path
 
@@ -78,7 +79,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='SymSpellCppPy',
-    version='0.0.15',
+    version=versioneer.get_version(),
     author='Arjun Variar & Mohit Tare',
     author_email='accio.arjun@gmail.com',
     description='A Fast SymSpell port for python written in C++ using pybind11.',
@@ -86,7 +87,7 @@ setup(
     long_description_content_type='text/markdown',
     test_suite="tests/SymSpellCppPyTest.py",
     ext_modules=[CMakeExtension('SymSpellCppPy')],
-    cmdclass=dict(build_ext=CMakeBuild),
+    cmdclass=versioneer.get_cmdclass(dict(build_ext=CMakeBuild)),
     python_requires=">=3.4",
     zip_safe=False,
     url="https://github.com/viig99/SymSpellCppPy",
