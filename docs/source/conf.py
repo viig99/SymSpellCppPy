@@ -21,14 +21,14 @@ sys.path.append(os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'SymSpellCppPy'
-copyright = '2020, Arjun Variar & Mohit Tare'
+copyright = '2023, Arjun Variar & Mohit Tare'
 author = 'Arjun Variar & Mohit Tare'
 
 # The short X.Y version
-version = '0.0.7'
+version = 'v0.0.16'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.7'
+release = 'v0.0.16'
 
 master_doc = 'index'
 

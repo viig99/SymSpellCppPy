@@ -1,6 +1,6 @@
 #pragma once
 
-//#define UNICODE_SUPPORT
+// #define UNICODE_SUPPORT
 #define DEFAULT_SEPARATOR_CHAR XL(' ')
 #define DEFAULT_MAX_EDIT_DISTANCE 2
 #define DEFAULT_PREFIX_LENGTH 7
@@ -37,59 +37,70 @@
 // 1. mistakenly inserted space into a correct word led to two incorrect terms
 // 2. mistakenly omitted space between two correct words led to one incorrect combined term
 // 3. multiple independent input terms with/without spelling errors
-namespace symspellcpppy {
-    static inline void ltrim(xstring &s) {
+namespace symspellcpppy
+{
+    static inline void ltrim(xstring &s)
+    {
 
-        s.erase(s.begin(), find_if(s.begin(), s.end(), [](xchar ch) {
-            return !isspace(ch);
-        }));
+        s.erase(s.begin(), find_if(s.begin(), s.end(), [](xchar ch)
+                                   { return !isspace(ch); }));
     }
 
-    static inline void rtrim(xstring &s) {
-        s.erase(find_if(s.rbegin(), s.rend(), [](xchar ch) {
-            return !isspace(ch);
-        }).base(), s.end());
+    static inline void rtrim(xstring &s)
+    {
+        s.erase(find_if(s.rbegin(), s.rend(), [](xchar ch)
+                        { return !isspace(ch); })
+                    .base(),
+                s.end());
     }
 
-    static inline void trim(xstring &s) {
+    static inline void trim(xstring &s)
+    {
         ltrim(s);
         rtrim(s);
     }
 
-    class Info {
+    class Info
+    {
     private:
-
         xstring segmentedstring;
         xstring correctedstring;
         int distanceSum;
         double probabilityLogSum;
+
     public:
-        void set(xstring &seg, xstring &cor, int d, double prob) {
+        void set(xstring &seg, xstring &cor, int d, double prob)
+        {
             segmentedstring = seg;
             correctedstring = cor;
             distanceSum = d;
             probabilityLogSum = prob;
         };
 
-        xstring getSegmented() const {
+        xstring getSegmented() const
+        {
             return segmentedstring;
         };
 
-        xstring getCorrected() const {
+        xstring getCorrected() const
+        {
             return correctedstring;
         };
 
-        int getDistance() const {
+        int getDistance() const
+        {
             return distanceSum;
         };
 
-        double getProbability() const {
+        double getProbability() const
+        {
             return probabilityLogSum;
         };
     };
 
     /// <summary>Controls the closeness/quantity of returned spelling suggestions.</summary>
-    enum Verbosity {
+    enum Verbosity
+    {
         /// <summary>Top suggestion with the highest term frequency of the suggestions of smallest edit distance found.</summary>
         Top,
         /// <summary>All suggestions of smallest edit distance found, suggestions ordered by term frequency.</summary>
@@ -99,15 +110,16 @@ namespace symspellcpppy {
         All
     };
 
-    class SymSpell {
+    class SymSpell
+    {
     protected:
         int initialCapacity;
         int maxDictionaryEditDistance;
-        int prefixLength; //prefix length  5..7
-        long countThreshold; //a threshold might be specified, when a term occurs so frequently in the corpus that it is considered a valid word for spelling correction
+        int prefixLength;    // prefix length  5..7
+        long countThreshold; // a threshold might be specified, when a term occurs so frequently in the corpus that it is considered a valid word for spelling correction
         int compactMask;
         DistanceAlgorithm distanceAlgorithm = DistanceAlgorithm::DamerauOSADistance;
-        int maxDictionaryWordLength; //maximum std::unordered_map term length
+        int maxDictionaryWordLength; // maximum std::unordered_map term length
         std::shared_ptr<std::unordered_map<int, std::vector<xstring>>> deletes;
         std::unordered_map<xstring, int64_t> words;
         std::unordered_map<xstring, int64_t> belowThresholdWords;
@@ -193,7 +205,7 @@ namespace symspellcpppy {
         /// <param name="verbosity">The value controlling the quantity/closeness of the retuned suggestions.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity);
+        std::vector<SuggestItem> Lookup(const xstring &input, Verbosity verbosity);
 
         /// <summary>Find suggested spellings for a given input word, using the maximum
         /// edit distance specified during construction of the SymSpell dictionary.</summary>
@@ -202,7 +214,7 @@ namespace symspellcpppy {
         /// <param name="maxEditDistance">The maximum edit distance between input and suggested words.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity, int maxEditDistance);
+        std::vector<SuggestItem> Lookup(const xstring &input, Verbosity verbosity, int maxEditDistance);
 
         /// <summary>Find suggested spellings for a given input word.</summary>
         /// <param name="input">The word being spell checked.</param>
@@ -211,7 +223,7 @@ namespace symspellcpppy {
         /// <param name="includeUnknown">Include input word in suggestions, if no words within edit distance found.</param>
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
+        std::vector<SuggestItem> Lookup(const xstring &input, Verbosity verbosity, int maxEditDistance, bool includeUnknown);
 
         /// <summary>Find suggested spellings for a given input word.</summary>
         /// <param name="input">The word being spell checked.</param>
@@ -221,28 +233,28 @@ namespace symspellcpppy {
         /// <param name="transfer_casing"> Lower case the word or not
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input word,
         /// sorted by edit distance, and secondarily by count frequency.</returns>
-        std::vector<SuggestItem> Lookup(const xstring& input, Verbosity verbosity, int maxEditDistance, bool includeUnknown, bool transferCasing);
+        std::vector<SuggestItem> Lookup(const xstring &input, Verbosity verbosity, int maxEditDistance, bool includeUnknown, bool transferCasing);
 
     private:
         bool
-        DeleteInSuggestionPrefix(const xstring& deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
+        DeleteInSuggestionPrefix(const xstring &deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
 
         static std::vector<xstring> ParseWords(const xstring &text);
 
         std::shared_ptr<std::unordered_set<xstring>>
         Edits(const xstring &word, int editDistance, std::shared_ptr<std::unordered_set<xstring>> deleteWords);
 
-        std::shared_ptr<std::unordered_set<xstring>> EditsPrefix(const xstring& key);
+        std::shared_ptr<std::unordered_set<xstring>> EditsPrefix(const xstring &key);
 
-        int GetstringHash(const xstring& s) const;
+        int GetstringHash(const xstring &s) const;
 
     public:
-        //######################
+        // ######################
 
-        //LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:
-        //1. mistakenly inserted space into a correct word led to two incorrect terms
-        //2. mistakenly omitted space between two correct words led to one incorrect combined term
-        //3. multiple independent input terms with/without spelling errors
+        // LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:
+        // 1. mistakenly inserted space into a correct word led to two incorrect terms
+        // 2. mistakenly omitted space between two correct words led to one incorrect combined term
+        // 3. multiple independent input terms with/without spelling errors
 
         /// <summary>Find suggested spellings for a multi-word input string (supports word splitting/merging).</summary>
         /// <param name="input">The string being spell checked.</param>
@@ -261,20 +273,20 @@ namespace symspellcpppy {
         /// <returns>A List of SuggestItem object representing suggested correct spellings for the input string.</returns>
         std::vector<SuggestItem> LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing);
 
-        //######
+        // ######
 
-        //WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions
-        //misspelled words are corrected and do not affect segmentation
-        //existing spaces are allowed and considered for optimum segmentation
+        // WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions
+        // misspelled words are corrected and do not affect segmentation
+        // existing spaces are allowed and considered for optimum segmentation
 
-        //SymSpell.WordSegmentation uses a novel approach *without* recursion.
-        //https://medium.com/@wolfgarbe/fast-word-segmentation-for-noisy-text-2c2c41f9e8da
-        //While each string of length n can be segmentend in 2^n−1 possible compositions https://en.wikipedia.org/wiki/Composition_(combinatorics)
-        //SymSpell.WordSegmentation has a linear runtime O(n) to find the optimum composition
+        // SymSpell.WordSegmentation uses a novel approach *without* recursion.
+        // https://medium.com/@wolfgarbe/fast-word-segmentation-for-noisy-text-2c2c41f9e8da
+        // While each string of length n can be segmentend in 2^n−1 possible compositions https://en.wikipedia.org/wiki/Composition_(combinatorics)
+        // SymSpell.WordSegmentation has a linear runtime O(n) to find the optimum composition
 
-        //number of all words in the corpus used to generate the frequency dictionary
-        //this is used to calculate the word occurrence probability p from word counts c : p=c/N
-        //N equals the sum of all counts c in the dictionary only if the dictionary is complete, but not if the dictionary is truncated or filtered
+        // number of all words in the corpus used to generate the frequency dictionary
+        // this is used to calculate the word occurrence probability p from word counts c : p=c/N
+        // N equals the sum of all counts c in the dictionary only if the dictionary is complete, but not if the dictionary is truncated or filtered
         static const int64_t N = 1024908267229L;
 
         /// <summary>Find suggested spellings for a multi-word input string (supports word splitting/merging).</summary>
@@ -306,9 +318,9 @@ namespace symspellcpppy {
         /// the Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).</returns>
         Info WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength);
 
-
-        template<class Archive>
-        void serialize(Archive &ar) {
+        template <class Archive>
+        void serialize(Archive &ar)
+        {
             ar(deletes, words, maxDictionaryWordLength);
         }
     };
