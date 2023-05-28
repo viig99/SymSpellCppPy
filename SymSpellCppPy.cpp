@@ -12,10 +12,11 @@ PYBIND11_MODULE(SymSpellCppPy, m)
 {
      m.doc() = R"pbdoc(
         SymSpellCppPy: Pybind11 binding for SymSpellPy
-        -------------------------------
+        ----------------------------------------------
         .. currentmodule:: SymSpellCppPy
         .. autosummary::
            :toctree: _generate
+
            Info
            SuggestItem
            Verbosity
@@ -27,7 +28,7 @@ PYBIND11_MODULE(SymSpellCppPy, m)
             Constructor of Info class.
         )pbdoc")
          .def("set", &symspellcpppy::Info::set, R"pbdoc(
-            Set the properties of Info object. Scope MAX trouble ...
+            Set the properties of Info object.
 
             :param segmented_string: Word segmented string.
             :param corrected_string: Word segmented and spelling corrected string.
@@ -115,13 +116,13 @@ PYBIND11_MODULE(SymSpellCppPy, m)
 
      py::enum_<symspellcpppy::Verbosity>(m, "Verbosity")
          .value("TOP", symspellcpppy::Verbosity::Top, R"pbdoc(
-          Top: Top suggestion with the highest term frequency of the suggestions of smallest edit distance found.
+          Top suggestion with the highest term frequency of the suggestions of smallest edit distance found.
      )pbdoc")
          .value("CLOSEST", symspellcpppy::Verbosity::Closest, R"pbdoc(
-          Closest: All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.
+          All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.
      )pbdoc")
          .value("ALL", symspellcpppy::Verbosity::All, R"pbdoc(
-          All: All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (highest first)
+          All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (highest first)
      )pbdoc")
          .export_values();
 
@@ -137,100 +138,122 @@ PYBIND11_MODULE(SymSpellCppPy, m)
          .def("word_count", &symspellcpppy::SymSpell::WordCount, R"pbdoc(
         Retrieves the total number of words in the dictionary.
     )pbdoc")
-         .def("max_length", &symspellcpppy::SymSpell::MaxLength, "Max length of words entered.")
-         .def("entry_count", &symspellcpppy::SymSpell::EntryCount, "Total number of deletes formed.")
-         .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold,
-              "Frequency of word so that its considered a valid word for spelling correction.")
+         .def("max_length", &symspellcpppy::SymSpell::MaxLength, R"pbdoc(
+        Retrieves the maximum length of words in the dictionary.
+    )pbdoc")
+         .def("entry_count", &symspellcpppy::SymSpell::EntryCount, R"pbdoc(
+        Retrieves the total number of delete words formed in the dictionary.
+    )pbdoc")
+         .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold, R"pbdoc(
+        Retrieves the frequency threshold to be considered as a valid word for spelling correction.
+    )pbdoc")
          .def(
              "create_dictionary_entry", [](symspellcpppy::SymSpell &sym, const xstring &key, int64_t count)
              {
-                auto staging = std::make_shared<SuggestionStage>(128);
-                sym.CreateDictionaryEntry(Helpers::string_lower(key), count, staging);
-                sym.CommitStaged(staging);
-                return sym.EntryCount() > 0; },
-             "Create/Update an entry in the dictionary.", py::arg("key"), py::arg("count"))
-         .def("delete_dictionary_entry", &symspellcpppy::SymSpell::DeleteDictionaryEntry,
-              "Delete the key from the dictionary & updates internal representation accordingly.",
+          auto staging = std::make_shared<SuggestionStage>(128);
+          sym.CreateDictionaryEntry(Helpers::string_lower(key), count, staging);
+          sym.CommitStaged(staging);
+          return sym.EntryCount() > 0; },
+             R"pbdoc(
+                Create or update an entry in the dictionary.
+    )pbdoc",
+             py::arg("key"), py::arg("count"))
+         .def("delete_dictionary_entry", &symspellcpppy::SymSpell::DeleteDictionaryEntry, R"pbdoc(
+        Deletes a word from the dictionary and updates internal representation accordingly.
+    )pbdoc",
               py::arg("key"))
-         .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(&symspellcpppy::SymSpell::LoadBigramDictionary),
-              "Load multiple dictionary entries from a file of word/frequency count pairs.",
-              py::arg("corpus"),
-              py::arg("term_index"),
-              py::arg("count_index"),
-              py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
-         .def("load_dictionary", py::overload_cast<const std::string &, int, int, xchar>(&symspellcpppy::SymSpell::LoadDictionary),
-              "Load multiple dictionary entries from a file of word/frequency count pairs.",
-              py::arg("corpus"),
-              py::arg("term_index"),
-              py::arg("count_index"),
-              py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
-         .def("create_dictionary", py::overload_cast<const std::string &>(&symspellcpppy::SymSpell::CreateDictionary),
-              "Load multiple dictionary words from a file containing plain text.",
+         .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(&symspellcpppy::SymSpell::LoadBigramDictionary), R"pbdoc(
+        Load multiple dictionary entries from a file of word/frequency count pairs.
+    )pbdoc",
+              py::arg("corpus"), py::arg("term_index"), py::arg("count_index"), py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
+         .def("load_dictionary", py::overload_cast<const std::string &, int, int, xchar>(&symspellcpppy::SymSpell::LoadDictionary), R"pbdoc(
+        Load multiple dictionary entries from a file of word/frequency count pairs.
+    )pbdoc",
+              py::arg("corpus"), py::arg("term_index"), py::arg("count_index"), py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
+         .def("create_dictionary", py::overload_cast<const std::string &>(&symspellcpppy::SymSpell::CreateDictionary), R"pbdoc(
+        Load multiple dictionary words from a file containing plain text.
+    )pbdoc",
               py::arg("corpus"))
          .def("purge_below_threshold_words", &symspellcpppy::SymSpell::PurgeBelowThresholdWords,
               "Remove all below threshold words from the dictionary.")
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity>(&symspellcpppy::SymSpell::Lookup),
-              " Find suggested spellings for a given input word, using the maximum\n"
-              "    edit distance specified during construction of the SymSpell dictionary.",
+         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
+        Find suggested spellings for a given input word, using the maximum
+        edit distance specified during construction of the SymSpell dictionary.
+     )pbdoc",
               py::arg("input"),
               py::arg("verbosity"))
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int>(&symspellcpppy::SymSpell::Lookup),
-              " Find suggested spellings for a given input word, using the maximum\n"
-              "    edit distance provided to the function.",
+         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
+        Find suggested spellings for a given input word, using the maximum
+        edit distance provided to the function.
+     )pbdoc",
               py::arg("input"),
               py::arg("verbosity"),
               py::arg("max_edit_distance"))
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int, bool>(&symspellcpppy::SymSpell::Lookup),
-              " Find suggested spellings for a given input word, using the maximum\n"
-              "    edit distance provided to the function and include input word in suggestions, if no words within edit distance found.",
+         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int, bool>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
+        Find suggested spellings for a given input word, using the maximum\
+        edit distance provided to the function and include input word in suggestions if no words within edit distance found.
+     )pbdoc",
               py::arg("input"),
               py::arg("verbosity"),
               py::arg("max_edit_distance"),
               py::arg("include_unknown"))
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int, bool, bool>(&symspellcpppy::SymSpell::Lookup),
-              " Find suggested spellings for a given input word, using the maximum\n"
-              "    edit distance provided to the function and include input word in suggestions, if no words within edit distance found & preserve transfer casing.",
+         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int, bool, bool>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
+        Find suggested spellings for a given input word, using the maximum
+        edit distance provided to the function and include input word in suggestions if no words within edit distance found & preserve transfer casing.
+     )pbdoc",
               py::arg("input"),
               py::arg("verbosity"),
               py::arg("max_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
               py::arg("include_unknown") = false,
               py::arg("transfer_casing") = false)
          .def("lookup_compound", py::overload_cast<const xstring &>(&symspellcpppy::SymSpell::LookupCompound),
-              " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
-              "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
-              "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
-              "    3. multiple independent input terms with/without spelling errors",
+              R"pbdoc(
+        LookupCompound supports compound-aware automatic spelling correction of multi-word input strings with three cases:
+          1. Mistakenly inserted space into a correct word led to two incorrect terms.
+          2. Mistakenly omitted space between two correct words led to one incorrect combined term.
+          3. Multiple independent input terms with/without spelling errors.
+    )pbdoc",
               py::arg("input"))
          .def("lookup_compound", py::overload_cast<const xstring &, int>(&symspellcpppy::SymSpell::LookupCompound),
-              " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
-              "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
-              "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
-              "    3. multiple independent input terms with/without spelling errors",
+              R"pbdoc(
+        LookupCompound supports compound-aware automatic spelling correction of multi-word input strings with three cases:
+          1. Mistakenly inserted space into a correct word led to two incorrect terms.
+          2. Mistakenly omitted space between two correct words led to one incorrect combined term.
+          3. Multiple independent input terms with/without spelling errors.
+    )pbdoc",
               py::arg("input"),
               py::arg("max_edit_distance"))
          .def("lookup_compound", py::overload_cast<const xstring &, int, bool>(&symspellcpppy::SymSpell::LookupCompound),
-              " LookupCompound supports compound aware automatic spelling correction of multi-word input strings with three cases:\n"
-              "    1. mistakenly inserted space into a correct word led to two incorrect terms \n"
-              "    2. mistakenly omitted space between two correct words led to one incorrect combined term\n"
-              "    3. multiple independent input terms with/without spelling errors",
+              R"pbdoc(
+        LookupCompound supports compound-aware automatic spelling correction of multi-word input strings with three cases:
+          1. Mistakenly inserted space into a correct word led to two incorrect terms.
+          2. Mistakenly omitted space between two correct words led to one incorrect combined term.
+          3. Multiple independent input terms with/without spelling errors.
+    )pbdoc",
               py::arg("input"),
               py::arg("max_edit_distance"),
               py::arg("transfer_casing"))
          .def("word_segmentation", py::overload_cast<const xstring &>(&symspellcpppy::SymSpell::WordSegmentation),
-              " WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions\n"
-              "    misspelled words are corrected and do not affect segmentation\n"
-              "    existing spaces are allowed and considered for optimum segmentation",
+              R"pbdoc(
+        WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions.
+        Misspelled words are corrected and do not affect segmentation.
+        Existing spaces are allowed and considered for optimum segmentation.
+    )pbdoc",
               py::arg("input"))
          .def("word_segmentation", py::overload_cast<const xstring &, int>(&symspellcpppy::SymSpell::WordSegmentation),
-              " WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions\n"
-              "    misspelled words are corrected and do not affect segmentation\n"
-              "    existing spaces are allowed and considered for optimum segmentation",
+              R"pbdoc(
+        WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions.
+        Misspelled words are corrected and do not affect segmentation.
+        Existing spaces are allowed and considered for optimum segmentation.
+    )pbdoc",
               py::arg("input"),
               py::arg("max_edit_distance"))
          .def("word_segmentation", py::overload_cast<const xstring &, int, int>(&symspellcpppy::SymSpell::WordSegmentation),
-              " WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions\n"
-              "    misspelled words are corrected and do not affect segmentation\n"
-              "    existing spaces are allowed and considered for optimum segmentation",
+              R"pbdoc(
+        WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions.
+        Misspelled words are corrected and do not affect segmentation.
+        Existing spaces are allowed and considered for optimum segmentation.
+    )pbdoc",
               py::arg("input"),
               py::arg("max_edit_distance"),
               py::arg("max_segmentation_word_length"))
