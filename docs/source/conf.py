@@ -25,10 +25,10 @@ copyright = '2023, Arjun Variar & Mohit Tare'
 author = 'Arjun Variar & Mohit Tare'
 
 # The short X.Y version
-version = 'v0.0.16'
+version = 'latest'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.0.16'
+release = 'latest'
 
 master_doc = 'index'
 

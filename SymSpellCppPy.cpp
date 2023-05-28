@@ -11,82 +11,132 @@ namespace py = pybind11;
 PYBIND11_MODULE(SymSpellCppPy, m)
 {
      m.doc() = R"pbdoc(
-        Pybind11 binding for SymSpellPy
+        SymSpellCppPy: Pybind11 binding for SymSpellPy
         -------------------------------
         .. currentmodule:: SymSpellCppPy
         .. autosummary::
            :toctree: _generate
-           symspell
+           Info
+           SuggestItem
+           Verbosity
+           SymSpell
     )pbdoc";
 
      py::class_<symspellcpppy::Info>(m, "Info")
-         .def(py::init<>())
-         .def("set", &symspellcpppy::Info::set, "Set Info properties", py::arg("segmented_string"),
-              py::arg("corrected_string"),
-              py::arg("distance_sum"), py::arg("log_prob_sum"))
-         .def("get_segmented", &symspellcpppy::Info::getSegmented, "The word segmented string.")
-         .def("get_corrected", &symspellcpppy::Info::getCorrected,
-              "The word segmented and spelling corrected string.")
-         .def("get_distance", &symspellcpppy::Info::getDistance,
-              "The Edit distance sum between input string and corrected string.")
-         .def("get_probability", &symspellcpppy::Info::getProbability,
-              "The Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).")
-         .def_property_readonly("segmented_string", &symspellcpppy::Info::getSegmented, "The word segmented string.")
-         .def_property_readonly("corrected_string", &symspellcpppy::Info::getCorrected,
-                                "The word segmented and spelling corrected string.")
-         .def_property_readonly("distance_sum", &symspellcpppy::Info::getDistance,
-                                "The Edit distance sum between input string and corrected string.")
-         .def_property_readonly("log_prob_sum", &symspellcpppy::Info::getProbability,
-                                "The Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).")
+         .def(py::init<>(), R"pbdoc(
+            Constructor of Info class.
+        )pbdoc")
+         .def("set", &symspellcpppy::Info::set, R"pbdoc(
+            Set the properties of Info object. Scope MAX trouble ...
+
+            :param segmented_string: Word segmented string.
+            :param corrected_string: Word segmented and spelling corrected string.
+            :param distance_sum: Edit distance sum between input string and corrected string.
+            :param log_prob_sum: Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).
+        )pbdoc",
+              py::arg("segmented_string"), py::arg("corrected_string"), py::arg("distance_sum"), py::arg("log_prob_sum"))
+         .def("get_segmented", &symspellcpppy::Info::getSegmented, R"pbdoc(
+            Get the word segmented string.
+        )pbdoc")
+         .def("get_corrected", &symspellcpppy::Info::getCorrected, R"pbdoc(
+            Get the word segmented and spelling corrected string.
+        )pbdoc")
+         .def("get_distance", &symspellcpppy::Info::getDistance, R"pbdoc(
+            Get the edit distance sum between input string and corrected string.
+        )pbdoc")
+         .def("get_probability", &symspellcpppy::Info::getProbability, R"pbdoc(
+            Get the sum of word occurrence probabilities in log scale. 
+            This is a measure of how common and probable the corrected segmentation is.
+        )pbdoc")
+         .def_property_readonly("segmented_string", &symspellcpppy::Info::getSegmented, R"pbdoc(
+            Read-only property to get the word segmented string.
+        )pbdoc")
+         .def_property_readonly("corrected_string", &symspellcpppy::Info::getCorrected, R"pbdoc(
+            Read-only property to get the word segmented and spelling corrected string.
+        )pbdoc")
+         .def_property_readonly("distance_sum", &symspellcpppy::Info::getDistance, R"pbdoc(
+            Read-only property to get the edit distance sum between input string and corrected string.
+        )pbdoc")
+         .def_property_readonly("log_prob_sum", &symspellcpppy::Info::getProbability, R"pbdoc(
+            Read-only property to get the sum of word occurrence probabilities in log scale. 
+            This is a measure of how common and probable the corrected segmentation is.
+        )pbdoc")
          .def("__repr__",
               [](const symspellcpppy::Info &a)
               {
-                   return "<Info corrected string ='" + a.getCorrected() + "'>";
+                   return "<Info corrected_string ='" + a.getCorrected() + "'>";
               });
 
-     py::class_<SuggestItem>(m, "SuggestItem")
-         .def(py::init<xstring, int, int64_t>())
+     py::class_<SuggestItem>(m, "SuggestItem", R"pbdoc(
+        SuggestItem is a class that contains a suggested correct spelling for a misspelled word.
+    )pbdoc")
+         .def(py::init<xstring, int, int64_t>(), R"pbdoc(
+        Initializes a new instance of the SuggestItem class.
+    )pbdoc")
          .def(
              "__eq__", [](const SuggestItem &a, const SuggestItem &b)
              { return a.Equals(b); },
-             "Compare ==")
+             R"pbdoc(
+            Compares the current object with another object of the same type.
+    )pbdoc")
          .def(
              "__lt__", [](const SuggestItem &a, const SuggestItem &b)
              { return SuggestItem::compare(a, b); },
-             "Order by distance ascending, then by frequency count descending.")
-         .def("__repr__",
-              [](const SuggestItem &a)
-              {
-                   return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
-              })
-         .def("__str__",
-              [](const SuggestItem &a)
-              {
-                   return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
-              })
-         .def_readwrite("term", &SuggestItem::term, "The suggested correctly spelled word.")
-         .def_readwrite("distance", &SuggestItem::distance,
-                        "Edit distance between searched for word and suggestion.")
-         .def_readwrite("count", &SuggestItem::count,
-                        "Frequency of suggestion in the dictionary (a measure of how common the word is).");
+             R"pbdoc(
+            Orders the objects of the same type.
+    )pbdoc")
+         .def(
+             "__repr__",
+             [](const SuggestItem &a)
+             {
+                  return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
+             },
+             R"pbdoc(
+            Returns a string that represents the current object.
+    )pbdoc")
+         .def(
+             "__str__",
+             [](const SuggestItem &a)
+             {
+                  return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
+             },
+             R"pbdoc(
+            Returns a string that represents the current object.
+    )pbdoc")
+         .def_readwrite("term", &SuggestItem::term, R"pbdoc(
+        Gets or sets the suggested correctly spelled word.
+    )pbdoc")
+         .def_readwrite("distance", &SuggestItem::distance, R"pbdoc(
+        Gets or sets the edit distance between the searched for word and the suggestion.
+    )pbdoc")
+         .def_readwrite("count", &SuggestItem::count, R"pbdoc(
+        Gets or sets the frequency of the suggestion in the dictionary (a measure of how common the word is).
+    )pbdoc");
 
      py::enum_<symspellcpppy::Verbosity>(m, "Verbosity")
-         .value("TOP", symspellcpppy::Verbosity::Top,
-                "The suggestion with the highest term frequency of the suggestions of smallest edit distance found.")
-         .value("CLOSEST", symspellcpppy::Verbosity::Closest,
-                "All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.")
-         .value("ALL", symspellcpppy::Verbosity::All,
-                "All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (slower, no early termination).")
+         .value("TOP", symspellcpppy::Verbosity::Top, R"pbdoc(
+          Top: Top suggestion with the highest term frequency of the suggestions of smallest edit distance found.
+     )pbdoc")
+         .value("CLOSEST", symspellcpppy::Verbosity::Closest, R"pbdoc(
+          Closest: All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.
+     )pbdoc")
+         .value("ALL", symspellcpppy::Verbosity::All, R"pbdoc(
+          All: All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (highest first)
+     )pbdoc")
          .export_values();
 
-     py::class_<symspellcpppy::SymSpell>(m, "SymSpell")
+     py::class_<symspellcpppy::SymSpell>(m, "SymSpell", R"pbdoc(
+        SymSpell is a class that provides fast and accurate spelling correction using Symmetric Delete spelling correction algorithm.
+    )pbdoc")
          .def(py::init<int, int, int, int, unsigned char>(), "SymSpell builder options",
               py::arg("max_dictionary_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
               py::arg("prefix_length") = DEFAULT_PREFIX_LENGTH,
               py::arg("count_threshold") = DEFAULT_COUNT_THRESHOLD,
               py::arg("initial_capacity") = DEFAULT_INITIAL_CAPACITY,
               py::arg("compact_level") = DEFAULT_COMPACT_LEVEL)
-         .def("word_count", &symspellcpppy::SymSpell::WordCount, "Number of words entered.")
+         .def("word_count", &symspellcpppy::SymSpell::WordCount, R"pbdoc(
+        Retrieves the total number of words in the dictionary.
+    )pbdoc")
          .def("max_length", &symspellcpppy::SymSpell::MaxLength, "Max length of words entered.")
          .def("entry_count", &symspellcpppy::SymSpell::EntryCount, "Total number of deletes formed.")
          .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold,

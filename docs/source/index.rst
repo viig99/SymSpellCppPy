@@ -15,7 +15,6 @@ For performance benchmarks, please refer to the library homepage on GitHub: `<ht
 Installation
 ------------
 SymSpellCppPy is available on PyPI and can be installed using pip:
-.. code-block:: bash
 
     pip install --upgrade SymSpellCppPy
 
