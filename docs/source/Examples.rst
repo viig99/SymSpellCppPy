@@ -100,21 +100,6 @@ To load the internal representation of a loaded `SymSpell` from a saved binary, 
     terms = anotherSymSpell.lookup("tke", SymSpellCppPy.Verbosity.CLOSEST)
     print(terms[0].term)
 
-Bigram and Trigram Suggestions
-------------------------------
-
-The SymSpellCppPy library also supports generating bigram and trigram suggestions:
-
-.. code-block:: python
-
-    # To generate bigram suggestions, use the `lookup_bigram` method:
-    terms = symSpell.lookup_bigram("in te dh", SymSpellCppPy.Verbosity.CLOSEST)
-    print(terms[0].term)  # Outputs: "in the dark"
-
-    # To generate trigram suggestions, use the `lookup_trigram` method:
-    terms = symSpell.lookup_trigram("an plesant day", SymSpellCppPy.Verbosity.CLOSEST)
-    print(terms[0].term)  # Outputs: "a pleasant day"
-
 Top N suggestions
 -------------------
 
