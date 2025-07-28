@@ -1,0 +1,71 @@
+name: Build wheels
+
+on:
+  push:
+    branches: [ master, main ]
+    tags: [ v* ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-14]  # macos-14 is Apple Silicon
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pybind11>=2.11.0 setuptools>=40.6.0
+
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.16.2
+      env:
+        # Skip 32-bit builds and older Python versions
+        CIBW_SKIP: "*-win32 *-manylinux_i686 pp* cp36-*"
+        # Apple Silicon specific settings
+        CIBW_ARCHS_MACOS: "x86_64 arm64"
+        # Ensure we have CMake 3.18+ and pybind11 2.11+
+        CIBW_BEFORE_ALL_MACOS: "brew install cmake && pip install 'pybind11>=2.11.0'"
+        CIBW_BEFORE_ALL_LINUX: |
+          if command -v yum > /dev/null; then
+            yum install -y cmake3;
+          elif command -v apt > /dev/null; then
+            apt update && apt install -y cmake;
+          elif command -v zypper > /dev/null; then
+            zypper install -y cmake;
+          else
+            echo "Unsupported package manager. Please install cmake manually." && exit 1;
+          fi
+          pip install 'pybind11>=2.11.0'
+        CIBW_BEFORE_ALL_WINDOWS: "pip install 'pybind11>=2.11.0'"
+        # Test that the wheels work
+        CIBW_TEST_COMMAND: "python -c \"import SymSpellCppPy; symspell = SymSpellCppPy.SymSpell(); print('✅ Import and basic functionality test passed')\""
+
+    - uses: actions/upload-artifact@v3
+      with:
+        path: ./wheelhouse/*.whl
+
+  upload_pypi:
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: artifact
+        path: dist
+
+    - uses: pypa/gh-action-pypi-publish@v1.8.10
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}

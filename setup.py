@@ -32,10 +32,15 @@ class CMakeBuild(build_ext):
             raise RuntimeError("CMake must be installed to build the following extensions: " +
                                ", ".join(e.name for e in self.extensions))
 
+        cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)', out.decode()).group(1))
+        
         if platform.system() == "Windows":
-            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)', out.decode()).group(1))
             if cmake_version < '3.1.0':
                 raise RuntimeError("CMake >= 3.1.0 is required on Windows")
+        else:
+            if cmake_version < '3.18.0':
+                raise RuntimeError("CMake >= 3.18.0 is required for Apple Silicon support. "
+                                 "Please update CMake by visiting https://cmake.org/download/ or using your system's package manager.")
 
         for ext in self.extensions:
             self.build_extension(ext)
@@ -58,6 +63,10 @@ class CMakeBuild(build_ext):
         cmake_args += ["-DCMAKE_BUILD_WITH_INSTALL_RPATH=TRUE"]
         cmake_args += ["-DCMAKE_INSTALL_RPATH={}".format("$ORIGIN")]
 
+        # Apple Silicon specific settings
+        if platform.system() == "Darwin" and platform.machine() == "arm64":
+            cmake_args += ["-DCMAKE_OSX_ARCHITECTURES=arm64"]
+
         if platform.system() == "Windows":
             cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
             if sys.maxsize > 2 ** 32:
@@ -70,6 +79,11 @@ class CMakeBuild(build_ext):
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
                                                               self.distribution.get_version())
+        
+        # Add Apple Silicon optimization flags
+        if platform.system() == "Darwin" and platform.machine() == "arm64":
+            env['CXXFLAGS'] = '{} -mcpu=apple-a14'.format(env.get('CXXFLAGS', ''))
+            
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
@@ -88,7 +102,14 @@ setup(
     test_suite="tests/SymSpellCppPyTest.py",
     ext_modules=[CMakeExtension('SymSpellCppPy')],
     cmdclass=versioneer.get_cmdclass(dict(build_ext=CMakeBuild)),
-    python_requires=">=3.4",
+    python_requires=">=3.7",
+    install_requires=[
+        "pybind11>=2.11.0",
+    ],
+    setup_requires=[
+        "pybind11>=2.11.0",
+        "setuptools>=40.6.0",
+    ],
     zip_safe=False,
     url="https://github.com/viig99/SymSpellCppPy",
     classifiers=[
@@ -98,13 +119,11 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11"
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12"
     ]
 )
