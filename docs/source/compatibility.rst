@@ -50,7 +50,7 @@ currently uses Damerau optimal string alignment and provides its own snapshot
 format.
 
 Changes when upgrading from 0.0.18
----------------------------------
+----------------------------------
 
 - CPython 3.10 is the minimum supported version.
 - ``create_dictionary_entry`` returns true only when a term is newly added to

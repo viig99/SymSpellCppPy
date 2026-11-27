@@ -24,7 +24,7 @@ first time. Counts below the threshold accumulate until they reach it.
    0
 
 Load a UTF-8 word list
----------------------
+----------------------
 
 Pass a string path or a path-like object. Column indices start at zero.
 With the default separator, runs of whitespace separate columns. To load a
