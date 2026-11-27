@@ -56,7 +56,7 @@ jobs:
       - name: Report native and binding coverage
         run: |
           gcovr --root . --filter '^(library\.(cpp|h)|unicode\.cpp|SymSpellCppPy\.cpp|include/(Helpers|DamerauOSA|EditDistance)\.h)$' --print-summary --xml coverage.xml build/coverage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.xml
