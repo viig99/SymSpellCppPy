@@ -71,3 +71,20 @@ jobs:
       - run: python -m pip install ".[docs]"
       - run: python -m sphinx -W --keep-going -b html docs/source build/docs
       - run: python -m sphinx -W -b doctest docs/source build/doctest
+
+  build:
+    name: build
+    if: ${{ always() }}
+    needs: [python, native, coverage, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs passed
+        env:
+          JOB_RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $JOB_RESULTS; do
+            if [ "$result" != success ]; then
+              echo "A required job reported $result"
+              exit 1
+            fi
+          done
