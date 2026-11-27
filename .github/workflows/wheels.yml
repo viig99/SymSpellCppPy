@@ -34,7 +34,7 @@ jobs:
       - run: python -m twine check --strict dist/*
       - run: python -m pip install dist/*.tar.gz
       - run: python -m pytest
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-sdist
           path: dist/*.tar.gz
@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pypa/cibuildwheel@v4.3.5
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.os }}
           path: wheelhouse/*.whl
