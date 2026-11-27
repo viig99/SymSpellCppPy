@@ -4,7 +4,7 @@ Fast Unicode spelling correction and word segmentation for Python. SymSpellCppPy
 
 [![PyPI](https://img.shields.io/pypi/v/SymSpellCppPy)](https://pypi.org/project/SymSpellCppPy/)
 [![CI](https://github.com/viig99/SymSpellCppPy/actions/workflows/ci.yml/badge.svg)](https://github.com/viig99/SymSpellCppPy/actions/workflows/ci.yml)
-[![Documentation](https://img.shields.io/readthedocs/symspellcpppy)](https://symspellcpppy.readthedocs.io/en/latest/)
+[![Documentation (latest)](https://img.shields.io/readthedocs/symspellcpppy/latest)](https://symspellcpppy.readthedocs.io/en/latest/)
 
 ## Install
 
