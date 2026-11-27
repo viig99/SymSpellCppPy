@@ -53,7 +53,10 @@ cmake --build build/native --config Release
 ctest --test-dir build/native -C Release --output-on-failure
 ```
 
-Set the release version in `pyproject.toml`. The installed package exposes the same version as `SymSpellCppPy.__version__`. Publish a GitHub release with a matching tag such as `v0.1.0` to build and publish the distributions.
+Set the release version in `pyproject.toml`. The installed package exposes the same version as `SymSpellCppPy.__version__`.
+
+1. Push a matching tag such as `v0.1.0` to build and test the wheels and source distribution. GitHub Actions stores them as artifacts for review.
+2. Publish a GitHub release from that tag. The release run rebuilds and tests the distributions, then uploads them to PyPI.
 
 ## Benchmarks
 
