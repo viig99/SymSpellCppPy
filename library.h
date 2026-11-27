@@ -7,31 +7,19 @@
 #define DEFAULT_COUNT_THRESHOLD 1
 #define DEFAULT_INITIAL_CAPACITY 82765
 #define DEFAULT_COMPACT_LEVEL 5
-#define min3(a, b, c) (min(a, min(b, c)))
-#define MAXINT LLONG_MAX
-#define M
-#define MAXLONG MAXINT
-
-#include <fstream>
-#include <sstream>
-#include <cstring>
-#include <cstdlib>
 #include <algorithm>
-#include <cctype>
-#include <locale>
-#include <regex>
-#include <iostream>
-#include "unordered_set"
-#include "include/Defines.h"
+#include <climits>
+#include <cstdint>
+#include <filesystem>
+#include <istream>
+#include <memory>
+#include <ostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include "include/Helpers.h"
 #include "include/EditDistance.h"
-#include "cereal/types/unordered_map.hpp"
-#include "cereal/types/string.hpp"
-#include "cereal/types/vector.hpp"
-#include "cereal/types/memory.hpp"
-#include "cereal/archives/binary.hpp"
-#include "cereal/cereal.hpp"
-#include "fstream"
 
 // SymSpell supports compound splitting / decompounding of multi-word input strings with three cases:
 // 1. mistakenly inserted space into a correct word led to two incorrect terms
@@ -39,50 +27,29 @@
 // 3. multiple independent input terms with/without spelling errors
 namespace symspellcpppy
 {
-    static inline void ltrim(xstring &s)
-    {
-
-        s.erase(s.begin(), find_if(s.begin(), s.end(), [](xchar ch)
-                                   { return !isspace(ch); }));
-    }
-
-    static inline void rtrim(xstring &s)
-    {
-        s.erase(find_if(s.rbegin(), s.rend(), [](xchar ch)
-                        { return !isspace(ch); })
-                    .base(),
-                s.end());
-    }
-
-    static inline void trim(xstring &s)
-    {
-        ltrim(s);
-        rtrim(s);
-    }
-
     class Info
     {
     private:
         xstring segmentedstring;
         xstring correctedstring;
-        int distanceSum;
-        double probabilityLogSum;
+        int distanceSum = 0;
+        double probabilityLogSum = 0;
 
     public:
-        void set(xstring &seg, xstring &cor, int d, double prob)
+        void set(xstring seg, xstring cor, int d, double prob)
         {
-            segmentedstring = seg;
-            correctedstring = cor;
+            segmentedstring = std::move(seg);
+            correctedstring = std::move(cor);
             distanceSum = d;
             probabilityLogSum = prob;
         };
 
-        xstring getSegmented() const
+        const xstring &getSegmented() const
         {
             return segmentedstring;
         };
 
-        xstring getCorrected() const
+        const xstring &getCorrected() const
         {
             return correctedstring;
         };
@@ -116,12 +83,14 @@ namespace symspellcpppy
         int initialCapacity;
         int maxDictionaryEditDistance;
         int prefixLength;    // prefix length  5..7
-        long countThreshold; // a threshold might be specified, when a term occurs so frequently in the corpus that it is considered a valid word for spelling correction
+        int countThreshold; // a threshold might be specified, when a term occurs so frequently in the corpus that it is considered a valid word for spelling correction
+        unsigned char compactLevel;
         int compactMask;
         DistanceAlgorithm distanceAlgorithm = DistanceAlgorithm::DamerauOSADistance;
         int maxDictionaryWordLength; // maximum std::unordered_map term length
-        std::shared_ptr<std::unordered_map<int, std::vector<xstring>>> deletes;
-        std::unordered_map<xstring, int64_t> words;
+        // The index refers to map elements, whose addresses are stable across rehashes.
+        DeleteIndex deletes;
+        WordCounts words;
         std::unordered_map<xstring, int64_t> belowThresholdWords;
 
     public:
@@ -131,7 +100,7 @@ namespace symspellcpppy
 
         int MaxLength() const;
 
-        long CountThreshold() const;
+        int CountThreshold() const;
 
         int WordCount();
 
@@ -151,12 +120,17 @@ namespace symspellcpppy
                           int initialCapacity = DEFAULT_INITIAL_CAPACITY,
                           unsigned char compactLevel = DEFAULT_COMPACT_LEVEL);
 
-        bool CreateDictionaryEntry(const xstring &key, int64_t count, const std::shared_ptr<SuggestionStage> &staging);
+        SymSpell(const SymSpell &other);
+        SymSpell &operator=(const SymSpell &other);
+        SymSpell(SymSpell &&) noexcept = default;
+        SymSpell &operator=(SymSpell &&) noexcept = default;
+
+        bool CreateDictionaryEntry(const xstring &key, int64_t count, const std::shared_ptr<SuggestionStage> &staging = nullptr);
 
         bool DeleteDictionaryEntry(const xstring &key);
 
-        std::unordered_map<xstring, long> bigrams;
-        int64_t bigramCountMin = MAXLONG;
+        std::unordered_map<xstring, int64_t> bigrams;
+        int64_t bigramCountMin = INT64_MAX;
 
         /// <summary>Load multiple dictionary entries from a file of word/frequency count pairs</summary>
         /// <remarks>Merges with any dictionary data already loaded.</remarks>
@@ -165,10 +139,10 @@ namespace symspellcpppy
         /// <param name="countIndex">The column position of the frequency count.</param>
         /// <param name="separatorChars">Separator characters between term(s) and count.</param>
         /// <returns>True if file loaded, or false if file not found.</returns>
-        bool LoadBigramDictionary(const std::string &corpus, int termIndex, int countIndex,
+        bool LoadBigramDictionary(const std::filesystem::path &corpus, int termIndex, int countIndex,
                                   xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
-        bool LoadBigramDictionary(xifstream &corpusStream, int termIndex, int countIndex,
+        bool LoadBigramDictionary(std::istream &corpusStream, int termIndex, int countIndex,
                                   xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
         /// <summary>Load multiple dictionary entries from a file of word/frequency count pairs</summary>
@@ -178,19 +152,19 @@ namespace symspellcpppy
         /// <param name="countIndex">The column position of the frequency count.</param>
         /// <param name="separatorChars">Separator characters between term(s) and count.</param>
         /// <returns>True if file loaded, or false if file not found.</returns>
-        bool LoadDictionary(const std::string &corpus, int termIndex, int countIndex,
+        bool LoadDictionary(const std::filesystem::path &corpus, int termIndex, int countIndex,
                             xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
-        bool LoadDictionary(xifstream &corpusStream, int termIndex, int countIndex,
+        bool LoadDictionary(std::istream &corpusStream, int termIndex, int countIndex,
                             xchar separatorChars = DEFAULT_SEPARATOR_CHAR);
 
         /// <summary>Load multiple dictionary words from a file containing plain text.</summary>
         /// <remarks>Merges with any dictionary data already loaded.</remarks>
         /// <param name="corpus">The path+filename of the file.</param>
         /// <returns>True if file loaded, or false if file not found.</returns>
-        bool CreateDictionary(const std::string &corpus);
+        bool CreateDictionary(const std::filesystem::path &corpus);
 
-        bool CreateDictionary(xifstream &corpusStream);
+        bool CreateDictionary(std::istream &corpusStream);
 
         /// <summary>Remove all below threshold words from the dictionary.</summary>
         /// <remarks>This can be used to reduce memory consumption after populating the dictionary from
@@ -237,7 +211,7 @@ namespace symspellcpppy
 
     private:
         bool
-        DeleteInSuggestionPrefix(const xstring &deleteSugg, int deleteLen, xstring suggestion, int suggestionLen) const;
+        DeleteInSuggestionPrefix(const xstring &deleteSugg, int deleteLen, const xstring &suggestion, int suggestionLen) const;
 
         static std::vector<xstring> ParseWords(const xstring &text);
 
@@ -287,7 +261,7 @@ namespace symspellcpppy
         // number of all words in the corpus used to generate the frequency dictionary
         // this is used to calculate the word occurrence probability p from word counts c : p=c/N
         // N equals the sum of all counts c in the dictionary only if the dictionary is complete, but not if the dictionary is truncated or filtered
-        static const int64_t N = 1024908267229L;
+        static const int64_t N = 1024908267229LL;
 
         /// <summary>Find suggested spellings for a multi-word input string (supports word splitting/merging).</summary>
         /// <param name="input">The string being spell checked.</param>
@@ -318,10 +292,7 @@ namespace symspellcpppy
         /// the Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).</returns>
         Info WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength);
 
-        template <class Archive>
-        void serialize(Archive &ar)
-        {
-            ar(deletes, words, maxDictionaryWordLength);
-        }
+        void Save(std::ostream &stream) const;
+        void Load(std::istream &stream);
     };
 }

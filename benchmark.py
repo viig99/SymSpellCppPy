@@ -1,228 +1,107 @@
-"""
-    To Check install
-    pip install pytest pytest-benchmark symspellpy SymSpellCppPy
-    pytest benchmark.py
-"""
+"""Time a fixed set of SymSpell operations and emit JSON for comparison."""
 
-from symspellpy import SymSpell as SymSpellPy, Verbosity as VerbosityPy
-from SymSpellCppPy import SymSpell as SymSpellCpp, Verbosity as VerbosityCpp
-import pytest
-import os
+import argparse
+import json
+import platform
+import sys
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+from statistics import median
+from time import perf_counter_ns
 
-dict_path = "resources/frequency_dictionary_en_82_765.txt"
-
-
-@pytest.mark.benchmark(
-    group="load_dict",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_load_dict_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(sym_spell.load_dictionary, dict_path, term_index=0, count_index=1, separator=" ")
+ROOT = Path(__file__).resolve().parent
+CLEAN = "the quick brown fox jumps over the lazy dog"
+SEGMENTATION = "thequickbrownfoxjumpsoverthelazydog"
+COMPOUND = "the quick brown fox jumps overthe lazy dog"
 
 
-@pytest.mark.benchmark(
-    group="load_dict",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_load_dict_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(sym_spell.load_dictionary, dict_path, term_index=0, count_index=1, separator=" ")
+def measure(operation, repeat, iterations):
+    operation()
+    samples = []
+    for _ in range(repeat):
+        start = perf_counter_ns()
+        for _ in range(iterations):
+            operation()
+        samples.append((perf_counter_ns() - start) / iterations / 1_000)
+    return {"median_us": round(median(samples), 3), "min_us": round(min(samples), 3)}
 
 
-@pytest.mark.benchmark(
-    group="lookup",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_term_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    input_term = "mEmEbers"
-    result = benchmark(sym_spell.lookup, input_term, VerbosityPy.CLOSEST, max_edit_distance=2, transfer_casing=True)
-    assert (result[0].term.lower() == "members")
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--implementation", choices=["cpp", "python"], default="cpp")
+    parser.add_argument("--rounds", type=int, default=7)
+    parser.add_argument("--resources", type=Path, default=ROOT / "resources")
+    parser.add_argument("--queries", type=Path, default=ROOT / "tests/fortests/noisy_query_en_1000.txt")
+    args = parser.parse_args()
+    if args.rounds < 1:
+        parser.error("--rounds must be positive")
+
+    if args.implementation == "cpp":
+        from SymSpellCppPy import SymSpell, Verbosity
+
+        distribution = "SymSpellCppPy"
+    else:
+        from symspellpy import SymSpell, Verbosity
+
+        distribution = "symspellpy"
+
+    dictionary = str(args.resources / "frequency_dictionary_en_82_765.txt")
+    bigrams = str(args.resources / "frequency_bigramdictionary_en_243_342.txt")
+    queries = [line.split()[0] for line in args.queries.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    def load_words():
+        spell = SymSpell()
+        assert spell.load_dictionary(dictionary, 0, 1)
+        return spell
+
+    def load_bigrams():
+        assert SymSpell().load_bigram_dictionary(bigrams, 0, 2)
+
+    spell = load_words()
+    assert spell.load_bigram_dictionary(bigrams, 0, 2)
+    assert spell.lookup("recieve", Verbosity.TOP)[0].term == "receive"
+    assert spell.lookup_compound(COMPOUND, 2)[0].term == CLEAN
+    assert spell.word_segmentation(SEGMENTATION).corrected_string == CLEAN
+    assert spell.lookup("StreaM", Verbosity.TOP, 1, transfer_casing=True)[0].term == "StreaM"
+
+    def lookup_batch():
+        for query in queries:
+            spell.lookup(query, Verbosity.CLOSEST, 2)
+
+    operations = {
+        "load_unigrams": (load_words, 1),
+        "load_bigrams": (load_bigrams, 1),
+        "lookup_exact": (lambda: spell.lookup("receive", Verbosity.TOP), 10_000),
+        "lookup_typo": (lambda: spell.lookup("recieve", Verbosity.TOP), 2_000),
+        "lookup_casing": (lambda: spell.lookup("RecIEve", Verbosity.TOP, 2, transfer_casing=True), 1_000),
+        "lookup_noisy_queries": (lookup_batch, 3),
+        "lookup_compound": (lambda: spell.lookup_compound(COMPOUND, 2), 100),
+        "segment": (lambda: spell.word_segmentation(SEGMENTATION), 100),
+    }
+    if args.implementation == "cpp":
+        payload = spell.save_pickle_bytes()
+        operations["serialize"] = (spell.save_pickle_bytes, 1)
+        operations["deserialize"] = (lambda: SymSpell().load_pickle_bytes(payload), 1)
+
+    try:
+        package_version = version(distribution)
+    except PackageNotFoundError:
+        package_version = "uninstalled extension"
+
+    print(json.dumps({
+        "implementation": distribution,
+        "version": package_version,
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "rounds": args.rounds,
+        "noisy_queries": len(queries),
+        "archive_bytes": len(payload) if args.implementation == "cpp" else None,
+        "results": {
+            name: measure(operation, args.rounds, iterations)
+            for name, (operation, iterations) in operations.items()
+        },
+    }, indent=2))
 
 
-@pytest.mark.benchmark(
-    group="lookup",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_term_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    input_term = "mEmEbers"
-    result = benchmark(sym_spell.lookup, input_term, VerbosityCpp.CLOSEST, max_edit_distance=2)
-    assert (result[0].term == "members")
-
-
-@pytest.mark.benchmark(
-    group="lookup_compound",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_compound_term_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    input_term = "whereis th elove"
-    result = benchmark(sym_spell.lookup_compound, input_term, max_edit_distance=2)
-    assert (result[0].term == "whereas the love")
-
-
-@pytest.mark.benchmark(
-    group="lookup_compound",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_compound_term_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    input_term = "whereis th elove"
-    result = benchmark(sym_spell.lookup_compound, input_term, max_edit_distance=2)
-    assert (result[0].term == "whereas the love")
-
-
-@pytest.mark.benchmark(
-    group="word_segmentation",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_word_segmentation_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    input_term = "thequickbrownfoxjumpsoverthelazydog"
-    result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
-    assert (result.segmented_string == "the quick brown fox jumps over the lazy dog")
-
-
-@pytest.mark.benchmark(
-    group="word_segmentation",
-    min_rounds=5,
-    disable_gc=True,
-    warmup=False
-)
-def test_word_segmentation_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    input_term = "thequickbrownfoxjumpsoverthelazydog"
-    result = benchmark(sym_spell.word_segmentation, input_term, max_edit_distance=0, max_segmentation_word_length=5)
-    assert (result.segmented_string == "the quick brown fox jumps over the lazy dog")
-
-@pytest.mark.benchmark(
-    group="save_pickle",
-    min_rounds=1,
-    disable_gc=True,
-    warmup=False
-)
-def test_save_pickle_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    os.makedirs("temp_py", exist_ok=True)
-    result = benchmark(sym_spell.save_pickle, "temp_py/temp.pk")
-    assert (sym_spell._max_length == 28)
-
-@pytest.mark.benchmark(
-    group="save_pickle",
-    min_rounds=1,
-    disable_gc=True,
-    warmup=False
-)
-def test_save_pickle_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, term_index=0, count_index=1, separator=" ")
-    os.makedirs("temp_cpppy", exist_ok=True)
-    result = benchmark(sym_spell.save_pickle, "temp_cpppy/temp.bin")
-    assert (sym_spell.max_length() == 28)
-
-@pytest.mark.benchmark(
-    group="load_pickle",
-    min_rounds=1,
-    disable_gc=True,
-    warmup=False
-)
-def test_load_pickle_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(sym_spell.load_pickle, "temp_py/temp.pk")
-    os.remove("temp_py/temp.pk")
-    os.rmdir("temp_py")
-    assert (sym_spell.lookup("tke", VerbosityPy.CLOSEST)[0].term == "the")
-
-@pytest.mark.benchmark(
-    group="load_pickle",
-    min_rounds=1,
-    disable_gc=True,
-    warmup=False
-)
-def test_load_pickle_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    benchmark(sym_spell.load_pickle, "temp_cpppy/temp.bin")
-    os.remove("temp_cpppy/temp.bin")
-    os.rmdir("temp_cpppy")
-    assert (sym_spell.lookup("tke", VerbosityCpp.CLOSEST)[0].term == "the")
-
-@pytest.mark.benchmark(
-    group="lookup_transfer_casing",
-    min_rounds=100,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_transfer_casing_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.create_dictionary_entry("steam", 4)
-    result = benchmark(sym_spell.lookup, "StreaM", VerbosityPy.TOP, 2,
-                              transfer_casing=True)
-    assert (result[0].term == "SteaM")
-
-@pytest.mark.benchmark(
-    group="lookup_transfer_casing",
-    min_rounds=100,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_transfer_casing_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.create_dictionary_entry("steam", 4)
-    result = benchmark(sym_spell.lookup, "StreaM", VerbosityCpp.TOP, 2,
-                              transfer_casing=True)
-    assert (result[0].term == "SteaM")
-
-@pytest.mark.benchmark(
-    group="lookup_compund_transfer_casing",
-    min_rounds=100,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_compund_transfer_casing_symspellpy(benchmark):
-    sym_spell = SymSpellPy(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, 0, 1)
-    typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
-            "couqdn'tread in sixthgrade AND ins pired him")
-    correction = ("Whereas the love heaD Dated for much of the past "
-                  "who couldn't read in sixth grade AND inspired him")
-    results = benchmark(sym_spell.lookup_compound, typo, 2, transfer_casing=True)
-    assert (results[0].term == correction)
-
-@pytest.mark.benchmark(
-    group="lookup_compund_transfer_casing",
-    min_rounds=100,
-    disable_gc=True,
-    warmup=False
-)
-def test_lookup_compund_transfer_casing_symspellcpppy(benchmark):
-    sym_spell = SymSpellCpp(max_dictionary_edit_distance=2, prefix_length=7)
-    sym_spell.load_dictionary(dict_path, 0, 1)
-    typo = ("Whereis th elove hehaD Dated forImuch of thepast who "
-            "couqdn'tread in sixthgrade AND ins pired him")
-    correction = ("Whereas the love heaD Dated for much of the past "
-                  "who couldn't read in sixth grade AND inspired him")
-    results = benchmark(sym_spell.lookup_compound, typo, 2, transfer_casing=True)
-    assert (results[0].term == correction)
+if __name__ == "__main__":
+    main()

@@ -1,313 +1,230 @@
-//
-// Created by vigi99 on 27/09/20.
-//
+#include <nanobind/nanobind.h>
+#include <nanobind/operators.h>
+#include <nanobind/stl/filesystem.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <fstream>
+#include <sstream>
+
 #include "library.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
+namespace unicode = symspellcpppy::unicode;
+using symspellcpppy::Info;
+using symspellcpppy::SymSpell;
+using symspellcpppy::Verbosity;
 
-PYBIND11_MODULE(SymSpellCppPy, m)
+namespace nanobind::detail
 {
-     m.doc() = R"pbdoc(
-        SymSpellCppPy: Pybind11 binding for SymSpellPy
-        ----------------------------------------------
-        .. currentmodule:: SymSpellCppPy
-        .. autosummary::
-           :toctree: _generate
+    template <> struct type_caster<xstring>
+    {
+        NB_TYPE_CASTER(xstring, const_name("str"))
 
-           Info
-           SuggestItem
-           Verbosity
-           SymSpell
-    )pbdoc";
+        bool from_python(handle source, uint8_t flags, cleanup_list *cleanup) noexcept
+        {
+            type_caster<std::string> utf8;
+            if (!utf8.from_python(source, flags, cleanup))
+                return false;
+            try
+            {
+                value = unicode::decode(utf8.value);
+                return true;
+            }
+            catch (...)
+            {
+                return false;
+            }
+        }
 
-     py::class_<symspellcpppy::Info>(m, "Info")
-         .def(py::init<>(), R"pbdoc(
-            Constructor of Info class.
-        )pbdoc")
-         .def("set", &symspellcpppy::Info::set, R"pbdoc(
-            Set the properties of Info object.
+        static handle from_cpp(const xstring &value, rv_policy policy, cleanup_list *cleanup)
+        {
+            return type_caster<std::string>::from_cpp(unicode::encode(value), policy, cleanup);
+        }
+    };
+}
 
-            :param segmented_string: Word segmented string.
-            :param corrected_string: Word segmented and spelling corrected string.
-            :param distance_sum: Edit distance sum between input string and corrected string.
-            :param log_prob_sum: Sum of word occurrence probabilities in log scale (a measure of how common and probable the corrected segmentation is).
-        )pbdoc",
-              py::arg("segmented_string"), py::arg("corrected_string"), py::arg("distance_sum"), py::arg("log_prob_sum"))
-         .def("get_segmented", &symspellcpppy::Info::getSegmented, R"pbdoc(
-            Get the word segmented string.
-        )pbdoc")
-         .def("get_corrected", &symspellcpppy::Info::getCorrected, R"pbdoc(
-            Get the word segmented and spelling corrected string.
-        )pbdoc")
-         .def("get_distance", &symspellcpppy::Info::getDistance, R"pbdoc(
-            Get the edit distance sum between input string and corrected string.
-        )pbdoc")
-         .def("get_probability", &symspellcpppy::Info::getProbability, R"pbdoc(
-            Get the sum of word occurrence probabilities in log scale. 
-            This is a measure of how common and probable the corrected segmentation is.
-        )pbdoc")
-         .def_property_readonly("segmented_string", &symspellcpppy::Info::getSegmented, R"pbdoc(
-            Read-only property to get the word segmented string.
-        )pbdoc")
-         .def_property_readonly("corrected_string", &symspellcpppy::Info::getCorrected, R"pbdoc(
-            Read-only property to get the word segmented and spelling corrected string.
-        )pbdoc")
-         .def_property_readonly("distance_sum", &symspellcpppy::Info::getDistance, R"pbdoc(
-            Read-only property to get the edit distance sum between input string and corrected string.
-        )pbdoc")
-         .def_property_readonly("log_prob_sum", &symspellcpppy::Info::getProbability, R"pbdoc(
-            Read-only property to get the sum of word occurrence probabilities in log scale. 
-            This is a measure of how common and probable the corrected segmentation is.
-        )pbdoc")
-         .def("__repr__",
-              [](const symspellcpppy::Info &a)
-              {
-                   return "<Info corrected_string ='" + a.getCorrected() + "'>";
-              });
+namespace
+{
+    xchar Separator(const xstring &text)
+    {
+        if (text.size() != 1)
+            throw std::invalid_argument("separator must be a single character");
+        return text.front();
+    }
 
-     py::class_<SuggestItem>(m, "SuggestItem", R"pbdoc(
-        SuggestItem is a class that contains a suggested correct spelling for a misspelled word.
-    )pbdoc")
-         .def(py::init<xstring, int, int64_t>(), R"pbdoc(
-        Initializes a new instance of the SuggestItem class.
-    )pbdoc")
-         .def(
-             "__eq__", [](const SuggestItem &a, const SuggestItem &b)
-             { return a.Equals(b); },
-             R"pbdoc(
-            Compares the current object with another object of the same type.
-    )pbdoc")
-         .def(
-             "__lt__", [](const SuggestItem &a, const SuggestItem &b)
-             { return SuggestItem::compare(a, b); },
-             R"pbdoc(
-            Orders the objects of the same type.
-    )pbdoc")
-         .def(
-             "__repr__",
-             [](const SuggestItem &a)
-             {
-                  return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
-             },
-             R"pbdoc(
-            Returns a string that represents the current object.
-    )pbdoc")
-         .def(
-             "__str__",
-             [](const SuggestItem &a)
-             {
-                  return a.term + ", " + std::to_string(a.distance) + ", " + std::to_string(a.count);
-             },
-             R"pbdoc(
-            Returns a string that represents the current object.
-    )pbdoc")
-         .def_readwrite("term", &SuggestItem::term, R"pbdoc(
-        Gets or sets the suggested correctly spelled word.
-    )pbdoc")
-         .def_readwrite("distance", &SuggestItem::distance, R"pbdoc(
-        Gets or sets the edit distance between the searched for word and the suggestion.
-    )pbdoc")
-         .def_readwrite("count", &SuggestItem::count, R"pbdoc(
-        Gets or sets the frequency of the suggestion in the dictionary (a measure of how common the word is).
-    )pbdoc");
+    std::string FormatSuggestion(const SuggestItem &item)
+    {
+        return unicode::encode(item.term) + ", " + std::to_string(item.distance) + ", " +
+               std::to_string(item.count);
+    }
 
-     py::enum_<symspellcpppy::Verbosity>(m, "Verbosity")
-         .value("TOP", symspellcpppy::Verbosity::Top, R"pbdoc(
-          Top suggestion with the highest term frequency of the suggestions of smallest edit distance found.
-     )pbdoc")
-         .value("CLOSEST", symspellcpppy::Verbosity::Closest, R"pbdoc(
-          All suggestions of smallest edit distance found, the suggestions are ordered by term frequency.
-     )pbdoc")
-         .value("ALL", symspellcpppy::Verbosity::All, R"pbdoc(
-          All suggestions <= maxEditDistance, the suggestions are ordered by edit distance, then by term frequency (highest first)
-     )pbdoc")
-         .export_values();
+    class Buffer
+    {
+    public:
+        explicit Buffer(nb::handle source)
+        {
+            if (PyObject_GetBuffer(source.ptr(), &view, PyBUF_STRIDES) != 0)
+                throw nb::python_error();
+        }
 
-     py::class_<symspellcpppy::SymSpell>(m, "SymSpell", R"pbdoc(
-        SymSpell is a class that provides fast and accurate spelling correction using Symmetric Delete spelling correction algorithm.
-    )pbdoc")
-         .def(py::init<int, int, int, int, unsigned char>(), "SymSpell builder options",
-              py::arg("max_dictionary_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
-              py::arg("prefix_length") = DEFAULT_PREFIX_LENGTH,
-              py::arg("count_threshold") = DEFAULT_COUNT_THRESHOLD,
-              py::arg("initial_capacity") = DEFAULT_INITIAL_CAPACITY,
-              py::arg("compact_level") = DEFAULT_COMPACT_LEVEL)
-         .def("word_count", &symspellcpppy::SymSpell::WordCount, R"pbdoc(
-        Retrieves the total number of words in the dictionary.
-    )pbdoc")
-         .def("max_length", &symspellcpppy::SymSpell::MaxLength, R"pbdoc(
-        Retrieves the maximum length of words in the dictionary.
-    )pbdoc")
-         .def("entry_count", &symspellcpppy::SymSpell::EntryCount, R"pbdoc(
-        Retrieves the total number of delete words formed in the dictionary.
-    )pbdoc")
-         .def("count_threshold", &symspellcpppy::SymSpell::CountThreshold, R"pbdoc(
-        Retrieves the frequency threshold to be considered as a valid word for spelling correction.
-    )pbdoc")
-         .def(
-             "create_dictionary_entry", [](symspellcpppy::SymSpell &sym, const xstring &key, int64_t count)
-             {
-          auto staging = std::make_shared<SuggestionStage>(128);
-          sym.CreateDictionaryEntry(Helpers::string_lower(key), count, staging);
-          sym.CommitStaged(staging);
-          return sym.EntryCount() > 0; },
-             R"pbdoc(
-                Create or update an entry in the dictionary.
-    )pbdoc",
-             py::arg("key"), py::arg("count"))
-         .def("delete_dictionary_entry", &symspellcpppy::SymSpell::DeleteDictionaryEntry, R"pbdoc(
-        Deletes a word from the dictionary and updates internal representation accordingly.
-    )pbdoc",
-              py::arg("key"))
-         .def("load_bigram_dictionary", py::overload_cast<const std::string &, int, int, xchar>(&symspellcpppy::SymSpell::LoadBigramDictionary), R"pbdoc(
-        Load multiple dictionary entries from a file of word/frequency count pairs.
-    )pbdoc",
-              py::arg("corpus"), py::arg("term_index"), py::arg("count_index"), py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
-         .def("load_dictionary", py::overload_cast<const std::string &, int, int, xchar>(&symspellcpppy::SymSpell::LoadDictionary), R"pbdoc(
-        Load multiple dictionary entries from a file of word/frequency count pairs.
-    )pbdoc",
-              py::arg("corpus"), py::arg("term_index"), py::arg("count_index"), py::arg("separator") = DEFAULT_SEPARATOR_CHAR)
-         .def("create_dictionary", py::overload_cast<const std::string &>(&symspellcpppy::SymSpell::CreateDictionary), R"pbdoc(
-        Load multiple dictionary words from a file containing plain text.
-    )pbdoc",
-              py::arg("corpus"))
-         .def("purge_below_threshold_words", &symspellcpppy::SymSpell::PurgeBelowThresholdWords,
-              "Remove all below threshold words from the dictionary.")
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
-        Find suggested spellings for a given input word, using the maximum
-        edit distance specified during construction of the SymSpell dictionary.
-     )pbdoc",
-              py::arg("input"),
-              py::arg("verbosity"))
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
-        Find suggested spellings for a given input word, using the maximum
-        edit distance provided to the function.
-     )pbdoc",
-              py::arg("input"),
-              py::arg("verbosity"),
-              py::arg("max_edit_distance"))
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int, bool>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
-        Find suggested spellings for a given input word, using the maximum\
-        edit distance provided to the function and include input word in suggestions if no words within edit distance found.
-     )pbdoc",
-              py::arg("input"),
-              py::arg("verbosity"),
-              py::arg("max_edit_distance"),
-              py::arg("include_unknown"))
-         .def("lookup", py::overload_cast<const xstring &, symspellcpppy::Verbosity, int, bool, bool>(&symspellcpppy::SymSpell::Lookup), R"pbdoc(
-        Find suggested spellings for a given input word, using the maximum
-        edit distance provided to the function and include input word in suggestions if no words within edit distance found & preserve transfer casing.
-     )pbdoc",
-              py::arg("input"),
-              py::arg("verbosity"),
-              py::arg("max_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
-              py::arg("include_unknown") = false,
-              py::arg("transfer_casing") = false)
-         .def("lookup_compound", py::overload_cast<const xstring &>(&symspellcpppy::SymSpell::LookupCompound),
-              R"pbdoc(
-        LookupCompound supports compound-aware automatic spelling correction of multi-word input strings with three cases:
-          1. Mistakenly inserted space into a correct word led to two incorrect terms.
-          2. Mistakenly omitted space between two correct words led to one incorrect combined term.
-          3. Multiple independent input terms with/without spelling errors.
-    )pbdoc",
-              py::arg("input"))
-         .def("lookup_compound", py::overload_cast<const xstring &, int>(&symspellcpppy::SymSpell::LookupCompound),
-              R"pbdoc(
-        LookupCompound supports compound-aware automatic spelling correction of multi-word input strings with three cases:
-          1. Mistakenly inserted space into a correct word led to two incorrect terms.
-          2. Mistakenly omitted space between two correct words led to one incorrect combined term.
-          3. Multiple independent input terms with/without spelling errors.
-    )pbdoc",
-              py::arg("input"),
-              py::arg("max_edit_distance"))
-         .def("lookup_compound", py::overload_cast<const xstring &, int, bool>(&symspellcpppy::SymSpell::LookupCompound),
-              R"pbdoc(
-        LookupCompound supports compound-aware automatic spelling correction of multi-word input strings with three cases:
-          1. Mistakenly inserted space into a correct word led to two incorrect terms.
-          2. Mistakenly omitted space between two correct words led to one incorrect combined term.
-          3. Multiple independent input terms with/without spelling errors.
-    )pbdoc",
-              py::arg("input"),
-              py::arg("max_edit_distance"),
-              py::arg("transfer_casing"))
-         .def("word_segmentation", py::overload_cast<const xstring &>(&symspellcpppy::SymSpell::WordSegmentation),
-              R"pbdoc(
-        WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions.
-        Misspelled words are corrected and do not affect segmentation.
-        Existing spaces are allowed and considered for optimum segmentation.
-    )pbdoc",
-              py::arg("input"))
-         .def("word_segmentation", py::overload_cast<const xstring &, int>(&symspellcpppy::SymSpell::WordSegmentation),
-              R"pbdoc(
-        WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions.
-        Misspelled words are corrected and do not affect segmentation.
-        Existing spaces are allowed and considered for optimum segmentation.
-    )pbdoc",
-              py::arg("input"),
-              py::arg("max_edit_distance"))
-         .def("word_segmentation", py::overload_cast<const xstring &, int, int>(&symspellcpppy::SymSpell::WordSegmentation),
-              R"pbdoc(
-        WordSegmentation divides a string into words by inserting missing spaces at the appropriate positions.
-        Misspelled words are corrected and do not affect segmentation.
-        Existing spaces are allowed and considered for optimum segmentation.
-    )pbdoc",
-              py::arg("input"),
-              py::arg("max_edit_distance"),
-              py::arg("max_segmentation_word_length"))
-         .def(
-             "save_pickle", [](symspellcpppy::SymSpell &sym, const std::string &filepath)
-             {
-                     std::ofstream binary_path(filepath, std::ios::out | std::ios::app | std::ios::binary);
-                     if (binary_path.is_open()) {
-                         cereal::BinaryOutputArchive ar(binary_path);
-                         ar(sym);
-                     } else {
-                         throw std::invalid_argument("Cannot save to file: " + filepath);
-                     } },
-             "Save internal representation to file",
-             py::arg("filepath"))
-         .def(
-             "load_pickle", [](symspellcpppy::SymSpell &sym, const std::string &filepath)
-             {
-                     if (Helpers::file_exists(filepath)) {
-                         std::ifstream binary_path(filepath, std::ios::binary);
-                         cereal::BinaryInputArchive ar(binary_path);
-                         ar(sym);
-                     } else {
-                         throw std::invalid_argument("Unable to load file from filepath: " + filepath);
-                     } },
-             "Load internal representation from file",
-             py::arg("filepath"))
-         .def(
-             "save_pickle_bytes", [](symspellcpppy::SymSpell &sym)
-             {
-                    std::ostringstream binary_stream(std::ios::out | std::ios::binary);
-                    cereal::BinaryOutputArchive ar(binary_stream);
-                    ar(sym);
+        ~Buffer() { PyBuffer_Release(&view); }
 
-                    return py::bytes(binary_stream.str()); },
-             "Save internal representation to bytes")
-         .def(
-             "load_pickle_bytes", [](symspellcpppy::SymSpell &sym, py::buffer bytes)
-             {
-                    py::buffer_info buff = bytes.request();
+        Buffer(const Buffer &) = delete;
+        Buffer &operator=(const Buffer &) = delete;
 
-                    if (buff.strides.size() != 1) {
-                         throw std::domain_error("Unable to load buffer: buffer should be 1-dimensional.");
-                    }
+        Py_buffer view{};
+    };
 
-                    if (buff.strides[0] != buff.itemsize) {
-                         throw std::domain_error("Unable to load buffer: buffer should be contiguous.");
-                    }
+    std::istringstream ReadTextStream(nb::handle corpus)
+    {
+        nb::object data = corpus.attr("read")();
+        if (nb::isinstance<nb::bytes>(data))
+        {
+            const auto bytes = nb::cast<nb::bytes>(data);
+            return std::istringstream(std::string(bytes.c_str(), bytes.size()));
+        }
+        return std::istringstream(nb::cast<std::string>(data));
+    }
+}
 
-                    std::string const bytes_str(reinterpret_cast<char*>(buff.ptr), buff.size * buff.itemsize);
-                    std::istringstream binary_stream(bytes_str, std::ios::in | std::ios::binary);
+NB_MODULE(_core, m)
+{
+    m.doc() = "Spelling correction and word segmentation using the Symmetric Delete algorithm.";
 
-                    cereal::BinaryInputArchive ar(binary_stream);
-                    ar(sym); },
-             "Load internal representation from buffers, such as 'bytes' and 'memoryview'",
-             py::arg("bytes"));
+    nb::class_<Info>(m, "Info", "Result of word segmentation.")
+        .def(nb::init<>())
+        .def("set", &Info::set, "Replace the fields of this result.", nb::arg("segmented_string"),
+             nb::arg("corrected_string"), nb::arg("distance_sum"), nb::arg("log_prob_sum"))
+        .def("get_segmented", &Info::getSegmented)
+        .def("get_corrected", &Info::getCorrected)
+        .def("get_distance", &Info::getDistance)
+        .def("get_probability", &Info::getProbability)
+        .def_prop_ro("segmented_string", &Info::getSegmented, "Input with word boundaries inserted.")
+        .def_prop_ro("corrected_string", &Info::getCorrected, "Segmented and corrected text.")
+        .def_prop_ro("distance_sum", &Info::getDistance, "Total edit cost of the segmentation.")
+        .def_prop_ro("log_prob_sum", &Info::getProbability, "Sum of base-10 log probabilities.")
+        .def("__repr__", [](const Info &result) {
+            return "<Info corrected_string ='" + unicode::encode(result.getCorrected()) + "'>";
+        });
+
+    nb::class_<SuggestItem>(m, "SuggestItem", "A spelling suggestion, its edit distance and frequency.")
+        .def(nb::init<xstring, int, int64_t>(), nb::arg("term"), nb::arg("distance"), nb::arg("count"))
+        .def("__eq__", &SuggestItem::Equals, nb::is_operator())
+        .def("__lt__", &SuggestItem::compare, nb::is_operator())
+        .def("__repr__", &FormatSuggestion)
+        .def("__str__", &FormatSuggestion)
+        .def_rw("term", &SuggestItem::term)
+        .def_rw("distance", &SuggestItem::distance)
+        .def_rw("count", &SuggestItem::count);
+
+    nb::enum_<Verbosity>(m, "Verbosity", "Controls how many spelling suggestions are returned.", nb::is_arithmetic())
+        .value("TOP", Verbosity::Top, "The highest-frequency suggestion at the smallest edit distance.")
+        .value("CLOSEST", Verbosity::Closest, "All suggestions at the smallest edit distance.")
+        .value("ALL", Verbosity::All, "All suggestions within the allowed edit distance.")
+        .export_values();
+
+    nb::class_<SymSpell>(m, "SymSpell", "A mutable dictionary for spelling correction.")
+        .def(nb::init<int, int, int, int, unsigned char>(),
+             nb::arg("max_dictionary_edit_distance") = DEFAULT_MAX_EDIT_DISTANCE,
+             nb::arg("prefix_length") = DEFAULT_PREFIX_LENGTH,
+             nb::arg("count_threshold") = DEFAULT_COUNT_THRESHOLD,
+             nb::arg("initial_capacity") = DEFAULT_INITIAL_CAPACITY,
+             nb::arg("compact_level") = DEFAULT_COMPACT_LEVEL)
+        .def("word_count", &SymSpell::WordCount, "Return the number of indexed words.")
+        .def("max_length", &SymSpell::MaxLength, "Return the longest indexed word length in code points.")
+        .def("entry_count", &SymSpell::EntryCount, "Return the number of delete hash buckets.")
+        .def("count_threshold", &SymSpell::CountThreshold, "Return the minimum count for indexed words.")
+        .def("max_dictionary_edit_distance", &SymSpell::MaxDictionaryEditDistance, "Return the index distance limit.")
+        .def("prefix_length", &SymSpell::PrefixLength, "Return the prefix length used by the index.")
+        .def("create_dictionary_entry", [](SymSpell &spell, const xstring &key, int64_t count) {
+            return spell.CreateDictionaryEntry(Helpers::string_lower(key), count);
+        }, "Add to a word's count and return whether the word was newly indexed.", nb::arg("key"), nb::arg("count"))
+        .def("delete_dictionary_entry", [](SymSpell &spell, const xstring &key) {
+            if (spell.DeleteDictionaryEntry(key))
+                return true;
+            const auto lowercase = Helpers::string_lower(key);
+            return lowercase != key && spell.DeleteDictionaryEntry(lowercase);
+        }, "Remove an indexed term and return whether it existed.", nb::arg("key"))
+        .def("load_dictionary", [](SymSpell &spell, const std::filesystem::path &corpus, int term, int count,
+                                   const xstring &separator) {
+            return spell.LoadDictionary(corpus, term, count, Separator(separator));
+        }, "Merge a UTF-8 file containing words and counts.", nb::arg("corpus"), nb::arg("term_index"),
+             nb::arg("count_index"), nb::arg("separator") = " ")
+        .def("load_dictionary_stream", [](SymSpell &spell, nb::handle corpus, int term, int count,
+                                          const xstring &separator) {
+            auto stream = ReadTextStream(corpus);
+            return spell.LoadDictionary(stream, term, count, Separator(separator));
+        }, "Merge words and counts from a readable text or UTF-8 binary stream.", nb::arg("corpus"),
+             nb::arg("term_index"), nb::arg("count_index"), nb::arg("separator") = " ")
+        .def("load_bigram_dictionary", [](SymSpell &spell, const std::filesystem::path &corpus, int term,
+                                          int count, const xstring &separator) {
+            return spell.LoadBigramDictionary(corpus, term, count, Separator(separator));
+        }, "Merge a UTF-8 file containing word pairs and counts.", nb::arg("corpus"), nb::arg("term_index"),
+             nb::arg("count_index"), nb::arg("separator") = " ")
+        .def("load_bigram_dictionary_stream", [](SymSpell &spell, nb::handle corpus, int term, int count,
+                                                 const xstring &separator) {
+            auto stream = ReadTextStream(corpus);
+            return spell.LoadBigramDictionary(stream, term, count, Separator(separator));
+        }, "Merge word pairs and counts from a readable text or UTF-8 binary stream.", nb::arg("corpus"),
+             nb::arg("term_index"), nb::arg("count_index"), nb::arg("separator") = " ")
+        .def("create_dictionary", nb::overload_cast<const std::filesystem::path &>(&SymSpell::CreateDictionary),
+             "Build word frequencies from a plain UTF-8 text file.", nb::arg("corpus"))
+        .def("create_dictionary_stream", [](SymSpell &spell, nb::handle corpus) {
+            auto stream = ReadTextStream(corpus);
+            return spell.CreateDictionary(stream);
+        }, "Build word frequencies from a readable text or UTF-8 binary stream.", nb::arg("corpus"))
+        .def("purge_below_threshold_words", &SymSpell::PurgeBelowThresholdWords,
+             "Discard accumulated counts for words that have not reached the indexing threshold.")
+        .def("lookup", [](SymSpell &spell, const xstring &input, Verbosity verbosity,
+                          std::optional<int> distance, bool includeUnknown, bool transferCasing) {
+            return spell.Lookup(input, verbosity, distance.value_or(spell.MaxDictionaryEditDistance()),
+                                includeUnknown, transferCasing);
+        }, "Find spellings for one word, ranked by distance and frequency.", nb::arg("input"), nb::arg("verbosity"),
+             nb::arg("max_edit_distance") = nb::none(), nb::arg("include_unknown") = false,
+             nb::arg("transfer_casing") = false)
+        .def("lookup_compound", [](SymSpell &spell, const xstring &input, std::optional<int> distance, bool casing) {
+            return spell.LookupCompound(input, distance.value_or(spell.MaxDictionaryEditDistance()), casing);
+        }, "Correct multiple words, including misplaced or missing spaces.", nb::arg("input"),
+             nb::arg("max_edit_distance") = nb::none(), nb::arg("transfer_casing") = false)
+        .def("word_segmentation", [](SymSpell &spell, const xstring &input, std::optional<int> distance,
+                                     std::optional<int> wordLength) {
+            const auto maxDistance = distance.value_or(spell.MaxDictionaryEditDistance());
+            return wordLength ? spell.WordSegmentation(input, maxDistance, *wordLength)
+                              : spell.WordSegmentation(input, maxDistance);
+        }, "Normalize, segment and correct text.", nb::arg("input"), nb::arg("max_edit_distance") = nb::none(),
+             nb::arg("max_segmentation_word_length") = nb::none())
+        .def("save_pickle", [](const SymSpell &spell, const std::filesystem::path &path) {
+            std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+            if (!stream)
+                throw std::invalid_argument("Cannot open archive for writing");
+            spell.Save(stream);
+            stream.close();
+            if (!stream)
+                throw std::runtime_error("Could not write archive");
+        }, "Overwrite a file with a binary dictionary snapshot.", nb::arg("filepath"))
+        .def("load_pickle", [](SymSpell &spell, const std::filesystem::path &path) {
+            std::ifstream stream(path, std::ios::binary);
+            if (!stream)
+                throw std::invalid_argument("Cannot open archive for reading");
+            spell.Load(stream);
+        }, "Restore a dictionary snapshot from a trusted file.", nb::arg("filepath"))
+        .def("save_pickle_bytes", [](const SymSpell &spell) {
+            std::ostringstream stream(std::ios::binary);
+            spell.Save(stream);
+            const auto data = std::move(stream).str();
+            return nb::bytes(data.data(), data.size());
+        }, "Return a binary dictionary snapshot as bytes.")
+        .def("load_pickle_bytes", [](SymSpell &spell, nb::handle source) {
+            Buffer buffer(source);
+            const auto &view = buffer.view;
+            if (view.ndim != 1 || !PyBuffer_IsContiguous(&view, 'C'))
+                throw std::invalid_argument("Expected a one-dimensional contiguous buffer");
+            std::string data;
+            if (view.len > 0)
+                data.assign(static_cast<const char *>(view.buf), view.len);
+            std::istringstream stream(std::move(data), std::ios::binary);
+            spell.Load(stream);
+        }, "Restore a dictionary snapshot from a trusted contiguous buffer.", nb::arg("bytes"));
 }

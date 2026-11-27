@@ -38,3 +38,7 @@
 cleanup.sh
 dist/
 .vscode/
+
+.venv/
+.pytest_cache/
+coverage.xml

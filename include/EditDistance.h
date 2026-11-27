@@ -36,7 +36,7 @@ public:
         }
     }
 
-    int Compare(xstring string1, xstring string2, double maxDistance) {
-        return (int) this->distanceComparer->Distance(std::move(string1), std::move(string2), maxDistance);
+    int Compare(const xstring &string1, const xstring &string2, double maxDistance) {
+        return (int) this->distanceComparer->Distance(string1, string2, maxDistance);
     }
 };

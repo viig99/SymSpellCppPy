@@ -6,32 +6,13 @@
 
 #include <unordered_map>
 #include <utility>
-#include <sys/stat.h>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <vector>
 #include "iostream"
 #include "Defines.h"
-#define DIFFLIB_ENABLE_EXTERN_MACROS
 #include <difflib.h>
-
-DIFFLIB_INSTANTIATE_FOR_TYPE(xstring);
-
-class DifflibOptions {
-public:
-    enum Value : uint8_t {
-        INSERT,
-        DELETE,
-        EQUAL,
-        REPLACE};
-
-    static const Value getType(std::string type) {
-        const std::map<std::string, Value> optionStrings {
-                { "insert", Value::INSERT },
-                { "delete", Value::DELETE },
-                { "equal", Value::EQUAL },
-                { "replace", Value::REPLACE },
-        };
-        return optionStrings.at(type);
-    }
-};
 
 class Helpers {
 public:
@@ -81,106 +62,44 @@ public:
 
     static xstring string_lower(const xstring& a) {
         xstring a_lower = a;
-        std::transform(a.begin(), a.end(), a_lower.begin(), to_xlower);
+        std::transform(a.begin(), a.end(), a_lower.begin(), symspellcpppy::unicode::lower);
         return a_lower;
     }
 
-    static xstring string_upper(const xstring& a) {
-        xstring a_upper = a;
-        std::transform(a.begin(), a.end(), a_upper.begin(), to_xupper);
-        return a_upper;
-    }
+    static xstring transfer_casing_for_similar_text(const xstring &source, const xstring &target) {
+        namespace unicode = symspellcpppy::unicode;
+        if (source.empty() || target.empty())
+            return target;
 
-    static bool file_exists (const std::string& name) {
-        struct stat buffer;
-        return (stat (name.c_str(), &buffer) == 0);
-    }
+        // SequenceMatcher holds a reference to its inputs.
+        const auto lower_source = string_lower(source);
+        auto matcher = difflib::MakeSequenceMatcher(lower_source, target);
+        xstring result;
+        result.reserve(target.size());
 
-    static xstring transfer_casing_for_matching_text(const xstring& text_w_casing, const xstring& text_wo_casing) {
-        if (text_w_casing.size() != text_wo_casing.size()) {
-            throw std::invalid_argument("The 'text_w_casing' and 'text_wo_casing' "
-                                        "don't have the same length, "
-                                        "so you can't use them with this method, "
-                                        "you should be using the more general "
-                                        "transfer_casing_similar_text() method.");
-        }
-        xstring response_string;
-        for (int i = 0; i < text_w_casing.size(); ++i) {
-            if (is_xupper(text_w_casing[i])) {
-                response_string += to_xupper(text_wo_casing[i]);
-            } else {
-                response_string += to_xlower(text_wo_casing[i]);
-            }
-        }
-        return response_string;
-    }
-
-    static xstring transfer_casing_for_similar_text(const xstring& text_w_casing, const xstring& text_wo_casing) {
-        if (text_wo_casing.empty()) {
-            return text_wo_casing;
-        }
-        if (text_w_casing.empty()) {
-            throw std::invalid_argument("We need 'text_w_casing' to know what casing to transfer!");
-        }
-
-        auto foo = difflib::MakeSequenceMatcher(string_lower(text_w_casing), text_wo_casing);
-        xstring response_string;
-
-        for (auto const& opcode : foo.get_opcodes()) {
-            std::string tag;
-            size_t i1, i2, j1, j2;
-            std::tie(tag, i1, i2, j1, j2) = opcode;
-            xstring _w_casing, _wo_casing, _last;
-            int _max_length;
-            switch (DifflibOptions::getType(tag)) {
-                case DifflibOptions::Value::INSERT:
-                    if (i1 == 0 or (text_w_casing[i1 - 1] == ' ')) {
-                        if (text_w_casing[i1] and is_xupper(text_w_casing[i1])) {
-                            response_string += string_upper(text_wo_casing.substr(j1, j2 - j1));
-                        } else {
-                            response_string += string_lower(text_wo_casing.substr(j1, j2 - j1));
-                        }
-                    } else {
-                        if (is_xupper(text_w_casing[i1 - 1])) {
-                            response_string += string_upper(text_wo_casing.substr(j1, j2 - j1));
-                        } else {
-                            response_string += string_lower(text_wo_casing.substr(j1, j2 - j1));
-                        }
-                    }
-                    break;
-                case DifflibOptions::Value::DELETE:
-                    break;
-                case DifflibOptions::Value::REPLACE:
-                    _w_casing = text_w_casing.substr(i1, i2-i1);
-                    _wo_casing = text_wo_casing.substr(j1, j2-j1);
-                    if (_w_casing.size() == _wo_casing.size()) {
-                        response_string += transfer_casing_for_matching_text(_w_casing, _wo_casing);
-                    } else {
-                        _last = XL("lower");
-                        _max_length = std::max(_w_casing.size(), _wo_casing.size());
-                        for (int i = 0; i < _max_length; ++i) {
-                            if (i < _w_casing.size()) {
-                                if (is_xupper(_w_casing[i])) {
-                                    response_string += to_xupper(_wo_casing[i]);
-                                    _last = "upper";
-                                } else {
-                                    response_string += to_xlower(_wo_casing[i]);
-                                    _last = "lower";
-                                }
-                            } else {
-                                response_string += (_last == "upper") ? to_xupper(_wo_casing[i]) : to_xlower(_wo_casing[i]);
-                            }
-                        }
-                    }
-                    break;
-                case DifflibOptions::Value::EQUAL :
-                    response_string += text_w_casing.substr(i1, i2-i1);
-                    break;
+        for (const auto &[tag, source_begin, source_end, target_begin, target_end] : matcher.get_opcodes()) {
+            if (tag == "equal") {
+                result.append(source, source_begin, source_end - source_begin);
+            } else if (tag == "insert") {
+                // At a word boundary, inherit the case of the next source character.
+                auto neighbor = source_begin;
+                if (neighbor > 0 && (neighbor == source.size() || !unicode::is_space(source[neighbor - 1])))
+                    --neighbor;
+                const bool upper = unicode::is_upper(source[neighbor]);
+                for (auto i = target_begin; i < target_end; ++i)
+                    result.push_back(upper ? unicode::upper(target[i]) : unicode::lower(target[i]));
+            } else if (tag == "replace") {
+                for (auto i = target_begin; i < target_end; ++i) {
+                    const auto source_index = std::min(source_begin + i - target_begin, source_end - 1);
+                    result.push_back(unicode::is_upper(source[source_index])
+                                         ? unicode::upper(target[i]) : unicode::lower(target[i]));
+                }
             }
         }
 
-        return response_string;
+        return result;
     }
+
 };
 
 template<class T>
@@ -234,83 +153,64 @@ public:
     }
 };
 
-class Node {
-public:
-    xstring suggestion;
-    int next;
-};
-
-class Entry {
-public:
-    int count;
-    int first;
-};
+using WordCounts = std::unordered_map<xstring, int64_t>;
+using DeleteIndex = std::unordered_map<int, std::vector<const WordCounts::value_type *>>;
 
 class SuggestionStage {
-private:
-    std::unordered_map<int, Entry> Deletes;
-    ChunkArray<Node> Nodes;
+    using IndexedWord = const WordCounts::value_type *;
+
+    struct Node {
+        const IndexedWord *word;
+        int next;
+    };
+
+    struct Entry {
+        int count = 0;
+        int first = -1;
+    };
+
+    std::unordered_map<int, Entry> deletes;
+    std::unordered_map<xstring, IndexedWord> stagedWords;
+    ChunkArray<Node> nodes;
 
 public:
     explicit SuggestionStage(int initialCapacity) {
-        Deletes.reserve(initialCapacity);
-        Nodes.Reserve(initialCapacity * 2);
+        deletes.reserve(initialCapacity);
+        nodes.Reserve(initialCapacity * 2);
     }
 
-    int DeleteCount() { return Deletes.size(); }
+    int DeleteCount() const { return deletes.size(); }
 
-    int NodeCount() const { return Nodes.Count; }
+    const IndexedWord *TrackWord(const xstring &word) { return &stagedWords[word]; }
 
-    void Clear() {
-        Deletes.clear();
-        Nodes.Clear();
+    void Add(int deleteHash, const IndexedWord *word) {
+        auto &entry = deletes[deleteHash];
+        Node node{word, entry.first};
+        entry.first = nodes.Add(node);
+        ++entry.count;
     }
 
-    void Add(int deleteHash, xstring suggestion) {
-        auto deletesFinded = Deletes.find(deleteHash);
-        Entry newEntry{};
-        newEntry.count = 0;
-        newEntry.first = -1;
-        Entry entry = (deletesFinded == Deletes.end()) ? newEntry : deletesFinded->second;
-        int next = entry.first;
-        entry.count++;
-        entry.first = Nodes.Count;
-        Deletes[deleteHash] = entry;
-        Node item;
-        item.suggestion = std::move(suggestion);
-        item.next = next; // 1st semantic errors, this should not be Nodes.Count
-        Nodes.Add(item);
-    }
-
-    void CommitTo(std::shared_ptr<std::unordered_map<int, std::vector<xstring>>> permanentDeletes) {
-        auto permanentDeletesEnd = permanentDeletes->end();
-        for (auto &Delete : Deletes) {
-            auto permanentDeletesFinded = permanentDeletes->find(Delete.first);
-            std::vector<xstring> suggestions;
-            int i;
-            if (permanentDeletesFinded != permanentDeletesEnd) {
-                suggestions = permanentDeletesFinded->second;
-                i = suggestions.size();
-
-                std::vector<xstring> newSuggestions;
-                newSuggestions.reserve(suggestions.size() + Delete.second.count);
-                std::copy(suggestions.begin(), suggestions.end(), back_inserter(newSuggestions));
-                suggestions = newSuggestions;
-            } else {
-                i = 0;
-                int32_t count = Delete.second.count;
-                suggestions.reserve(count);
-            }
-
-            int next = Delete.second.first;
-            while (next >= 0) {
-                auto node = Nodes.At(next);
-                suggestions.push_back(node.suggestion);
-                next = node.next;
-                ++i;
-            }
-            (*permanentDeletes)[Delete.first] = suggestions;
+    void CommitTo(DeleteIndex &index, const WordCounts &words) {
+        // Resolve terms once so removing a word before commit cannot leave a stale pointer.
+        for (auto &[key, word] : stagedWords) {
+            const auto found = words.find(key);
+            word = found == words.end() ? nullptr : &*found;
         }
+        for (const auto &[hash, entry] : deletes) {
+            auto &suggestions = index[hash];
+            suggestions.reserve(suggestions.size() + entry.count);
+            for (auto next = entry.first; next >= 0; ) {
+                const auto &node = nodes.At(next);
+                if (*node.word)
+                    suggestions.push_back(*node.word);
+                next = node.next;
+            }
+            if (suggestions.empty())
+                index.erase(hash);
+        }
+        deletes.clear();
+        nodes.Clear();
+        stagedWords.clear();
     }
 };
 
@@ -348,8 +248,9 @@ public:
         return std::hash<xstring>{}(this->term);
     }
 
-    xstring Tostring() const {
-        return XL("{") + term + XL(", ") + to_xstring(distance) + XL(", ") + to_xstring(count) + XL("}");
+    std::string Tostring() const {
+        return "{" + symspellcpppy::unicode::encode(term) + ", " + std::to_string(distance) +
+               ", " + std::to_string(count) + "}";
     }
 
     static bool compare(const SuggestItem &s1, const SuggestItem &s2) {

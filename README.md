@@ -1,62 +1,66 @@
 # SymSpellCppPy
-A Fast SymSpell v6.5 port for python written in C++ using pybind11.
 
-![Version](https://img.shields.io/pypi/v/SymSpellCppPy?style=flat-square)
-![UnitTests](https://img.shields.io/github/actions/workflow/status/viig99/SymSpellCppPy/python-app.yml?branch=master&style=flat-square)
-![Docs](https://img.shields.io/readthedocs/symspellcpppy?style=flat-square)
-![Downloads](https://img.shields.io/pypi/dm/SymSpellCppPy?style=flat-square)
-![License](https://img.shields.io/github/license/viig99/SymSpellCppPy?style=flat-square)
+Fast Unicode spelling correction and word segmentation for Python. SymSpellCppPy uses the Symmetric Delete algorithm in C++20 and exposes it through nanobind.
 
-## Installation
-```shell script
-pip install --upgrade SymSpellCppPy
+[![PyPI](https://img.shields.io/pypi/v/SymSpellCppPy)](https://pypi.org/project/SymSpellCppPy/)
+[![CI](https://github.com/viig99/SymSpellCppPy/actions/workflows/ci.yml/badge.svg)](https://github.com/viig99/SymSpellCppPy/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/readthedocs/symspellcpppy)](https://symspellcpppy.readthedocs.io/en/latest/)
+
+## Install
+
+```sh
+python -m pip install SymSpellCppPy
 ```
 
-## Documentation
-* Check [examples](https://symspellcpppy.readthedocs.io/en/latest/Examples.html) for provided usage.
-* Check [api docs](https://symspellcpppy.readthedocs.io/en/latest/SymSpellCppPy.html#pybind11-binding-for-symspellpy) for detailed API documentation.
-* Check `tests/SymSpellCppPyTest.py` for extended api usage.
+The project targets CPython 3.10–3.15. The release workflow builds wheels for Linux x86-64 and arm64, Windows x64, and macOS Intel and Apple Silicon. Source builds require CMake 3.26 or newer and a C++20 compiler.
 
-## Benchmark Results
-Run on AMD 5900x
-```shell script
-pip install pytest pytest-benchmark symspellpy SymSpellCppPy
-pytest benchmark.py --benchmark-compare
+## Correct a word
+
+```python
+from SymSpellCppPy import SymSpell, Verbosity
+
+spell = SymSpell(max_dictionary_edit_distance=1)
+spell.create_dictionary_entry("damen", 42)
+spell.create_dictionary_entry("receive", 100)
+
+suggestion, = spell.lookup("dämen", Verbosity.TOP)
+print(suggestion.term, suggestion.distance)  # damen 1
+
+suggestion, = spell.lookup("Recieve", Verbosity.TOP, transfer_casing=True)
+print(suggestion.term)  # Receive
 ```
-![Benchmark Results](https://github.com/viig99/SymSpellCppPy/blob/master/resources/benchmark.png?raw=true)
+
+The package includes English unigram and bigram dictionaries. The [runnable quickstart](examples/quickstart.py) shows how to load them and use word lookup, compound correction, and segmentation. See the [usage guides and API reference](https://symspellcpppy.readthedocs.io/en/latest/) for custom dictionaries, Unicode, and binary snapshots.
+
+## SymSpell compatibility
+
+The [compatibility guide](docs/source/compatibility.rst) tracks the C# reference through SymSpell 6.7.3. It covers the 6.7 segmentation changes, the 6.7.1 dictionary update, and remaining differences with the reference and `symspellpy`.
 
 ## Development
-```shell script
-git clone git@github.com:viig99/SymSpellCppPy.git
-cd SymSpellCppPy
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+
+```sh
+python -m pip install -e '.[test,docs]'
+python -m pytest
+python -m sphinx -W -b html docs/source build/docs
+python -m sphinx -W -b doctest docs/source build/doctest
 ```
 
-### Testing
+Native tests use Catch2 and CTest.
 
-
-### Python Bindings
-
-### Build
-```shell script
-python3 setup.py build
+```sh
+cmake -S . -B build/native -DBUILD_FOR_TEST=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/native --config Release
+ctest --test-dir build/native -C Release --output-on-failure
 ```
 
-### Test
-#### Python tests
-```shell script
-python3 setup.py test
-```
+Set the release version in `pyproject.toml`. The installed package exposes the same version as `SymSpellCppPy.__version__`. Publish a GitHub release with a matching tag such as `v0.1.0` to build and publish the distributions.
 
-#### C++ tests
-For detailed list of command line test flags please refer to [Catch 2 Docs](https://github.com/catchorg/Catch2/blob/master/docs/command-line.md#top)
-```shell script
-cd build
-./Catch2Test -s
-```
+## Benchmarks
+
+See [benchmark results and reproduction commands](docs/source/benchmarks.rst). Run `python benchmark.py` to measure the installed extension. Install `.[benchmark]` and pass `--implementation python` to run the shared workloads against `symspellpy`.
 
 ## Acknowledgements
-* [SymSpell by @wolfgarbe](https://github.com/wolfgarbe/SymSpell)
-* [SymspellCPP by @AtheS21](https://github.com/AtheS21/SymspellCPP)
+
+- [SymSpell by Wolf Garbe](https://github.com/wolfgarbe/SymSpell)
+- [SymspellCPP by AtheS21](https://github.com/AtheS21/SymspellCPP)
+- [symspellpy by mammothb](https://github.com/mammothb/symspellpy)

@@ -1,17 +1,20 @@
 import unittest
 from SymSpellCppPy import SymSpell, Verbosity, SuggestItem
 import os
+from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 
 
 class SymSpellCppPyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        root = Path(__file__).resolve().parents[1]
+        cls.fortests_path = root / "tests" / "fortests"
+        cls.dictionary_path = root / "resources" / "frequency_dictionary_en_82_765.txt"
+        cls.bigram_path = root / "resources" / "frequency_bigramdictionary_en_243_342.txt"
         cls.symSpell = SymSpell()
-        cls.symSpell.load_dictionary("resources/frequency_dictionary_en_82_765.txt", 0, 1, " ")
-        cls.fortests_path = "tests/fortests"
-        cls.dictionary_path = "resources/frequency_dictionary_en_82_765.txt"
-        cls.bigram_path = "resources/frequency_bigramdictionary_en_243_342.txt"
+        assert cls.symSpell.load_dictionary(cls.dictionary_path, 0, 1)
 
     def test_negative_max_dictionary_edit_distance(self):
         self.assertRaisesRegex(ValueError, ".*max_dictionary_edit_distance cannot be negative.*",
@@ -250,7 +253,7 @@ class SymSpellCppPyTests(unittest.TestCase):
         for phrase in test_list:
             result_sum += len(self.symSpell.lookup(phrase, verbosity,
                                                    edit_distance_max))
-        self.assertEqual(4945, result_sum)
+        self.assertEqual(4955, result_sum)
 
     def test_lookup_compound(self):
         edit_distance_max = 2
@@ -545,7 +548,9 @@ class SymSpellCppPyTests(unittest.TestCase):
         self.assertEqual(68, sym_spell.max_length())
 
     def test_pickle_compressed(self):
-        pickle_path = os.path.join(self.fortests_path, "dictionary.pickle")
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        pickle_path = Path(directory.name) / "dictionary.bin"
         edit_distance_max = 2
         prefix_length = 7
         sym_spell = SymSpell(edit_distance_max, prefix_length)
@@ -557,7 +562,6 @@ class SymSpellCppPyTests(unittest.TestCase):
         self.assertEqual(sym_spell.max_length(), sym_spell_2.max_length())
         self.assertEqual(sym_spell.lookup("flam", Verbosity.TOP, 0, True)[0].term,
                          sym_spell_2.lookup("flam", Verbosity.TOP, 0, True)[0].term)
-        os.remove(pickle_path)
 
     def test_pickle_bytes(self):
         edit_distance_max = 2
@@ -700,14 +704,14 @@ class SymSpellCppPyTests(unittest.TestCase):
     def test_save_load(self):
         before_save = self.symSpell.lookup("tke", Verbosity.CLOSEST)[0].term
         before_max_length = self.symSpell.max_length()
-        os.makedirs("temp", exist_ok=True)
-        self.symSpell.save_pickle("temp/temp.bin")
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        archive = Path(directory.name) / "dictionary.bin"
+        self.symSpell.save_pickle(archive)
         load_sym_spell = SymSpell()
-        load_sym_spell.load_pickle("temp/temp.bin")
+        load_sym_spell.load_pickle(archive)
         after_load = load_sym_spell.lookup("tke", Verbosity.CLOSEST)[0].term
         after_max_length = load_sym_spell.max_length()
-        os.remove("temp/temp.bin")
-        os.rmdir("temp")
         assert (before_save == after_load)
         assert (before_max_length == after_max_length)
 

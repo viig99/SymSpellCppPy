@@ -1,0 +1,61 @@
+[build-system]
+requires = ["scikit-build-core>=0.11.4", "nanobind>=3.1,<4"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "SymSpellCppPy"
+version = "0.1.0"
+description = "Fast Unicode spelling correction and word segmentation for Python."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0 AND BSD-3-Clause AND MIT AND LicenseRef-utf8proc-Unicode-Data"
+license-files = ["LICENSE", "third_party/LICENSES.txt", "third_party/utf8proc/LICENSE.md"]
+authors = [{name = "Arjun Variar"}, {name = "Mohit Tare"}]
+classifiers = [
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Text Processing :: Linguistic",
+]
+
+[project.urls]
+Repository = "https://github.com/viig99/SymSpellCppPy"
+Documentation = "https://symspellcpppy.readthedocs.io/"
+Issues = "https://github.com/viig99/SymSpellCppPy/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+docs = ["sphinx>=8", "furo>=2024.8.6"]
+benchmark = ["symspellpy>=6.9,<7"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.26"
+wheel.packages = ["src/SymSpellCppPy"]
+wheel.py-api = "cp312"
+sdist.exclude = [".github"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.cibuildwheel]
+build = "cp3{10,11,12,13,14,15}-*"
+skip = "*-musllinux_*"
+archs = ["auto64"]
+test-requires = ["pytest"]
+test-sources = ["tests", "resources"]
+test-command = "python -m pytest tests"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "11.0"

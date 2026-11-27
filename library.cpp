@@ -1,8 +1,17 @@
 #include "library.h"
 
-#include <codecvt>
-#include <utility>
+#include <charconv>
+#include <deque>
 #include <fstream>
+#include <optional>
+#include <utility>
+
+#include "cereal/archives/binary.hpp"
+#include "cereal/archives/portable_binary.hpp"
+#include "cereal/types/memory.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/unordered_map.hpp"
+#include "cereal/types/vector.hpp"
 
 namespace symspellcpppy
 {
@@ -22,7 +31,7 @@ namespace symspellcpppy
         return maxDictionaryWordLength;
     }
 
-    long SymSpell::CountThreshold() const
+    int SymSpell::CountThreshold() const
     {
         return countThreshold;
     }
@@ -34,14 +43,15 @@ namespace symspellcpppy
 
     int SymSpell::EntryCount()
     {
-        return deletes == nullptr ? 0 : deletes->size();
+        return deletes.size();
     }
 
     SymSpell::SymSpell(int _maxDictionaryEditDistance, int _prefixLength, int _countThreshold, int _initialCapacity,
-                       unsigned char _compactLevel) : maxDictionaryEditDistance(_maxDictionaryEditDistance),
+                       unsigned char _compactLevel) : initialCapacity(_initialCapacity),
+                                                      maxDictionaryEditDistance(_maxDictionaryEditDistance),
                                                       prefixLength(_prefixLength),
                                                       countThreshold(_countThreshold),
-                                                      initialCapacity(_initialCapacity)
+                                                      compactLevel(_compactLevel)
     {
         if (_initialCapacity < 0)
             throw std::invalid_argument("initial_capacity is too small.");
@@ -55,11 +65,33 @@ namespace symspellcpppy
         if (_compactLevel > 16)
             throw std::invalid_argument("compact_level cannot be greater than 16");
 
-        if (_compactLevel > 16)
-            _compactLevel = 16;
         compactMask = (UINT_MAX >> (3 + _compactLevel)) << 2;
         maxDictionaryWordLength = 0;
         words = std::unordered_map<xstring, int64_t>(initialCapacity);
+    }
+
+    SymSpell::SymSpell(const SymSpell &other)
+        : SymSpell(other.maxDictionaryEditDistance, other.prefixLength, other.countThreshold,
+                   other.initialCapacity, other.compactLevel)
+    {
+        words = other.words;
+        belowThresholdWords = other.belowThresholdWords;
+        maxDictionaryWordLength = other.maxDictionaryWordLength;
+        bigrams = other.bigrams;
+        bigramCountMin = other.bigramCountMin;
+        deletes.reserve(other.deletes.size());
+        for (const auto &[hash, entries] : other.deletes)
+        {
+            auto &bucket = deletes[hash];
+            bucket.reserve(entries.size());
+            for (const auto *word : entries)
+                bucket.push_back(&*words.find(word->first));
+        }
+    }
+
+    SymSpell &SymSpell::operator=(const SymSpell &other)
+    {
+        return *this = SymSpell(other);
     }
 
     bool SymSpell::CreateDictionaryEntry(const xstring &key, int64_t count,
@@ -72,13 +104,13 @@ namespace symspellcpppy
                 return false; // no point doing anything if count is zero, as it can't change anything
             count = 0;
         }
-        int countPrevious = -1;
+        int64_t countPrevious;
         auto belowThresholdWordsFinded = belowThresholdWords.find(key);
         auto wordsFinded = words.find(key);
         if (countThreshold > 1 && belowThresholdWordsFinded != belowThresholdWords.end())
         {
             countPrevious = belowThresholdWordsFinded->second;
-            count = (MAXINT - countPrevious > count) ? countPrevious + count : MAXINT;
+            count = (INT64_MAX - countPrevious > count) ? countPrevious + count : INT64_MAX;
             if (count >= countThreshold)
             {
                 belowThresholdWords.erase(key);
@@ -92,8 +124,8 @@ namespace symspellcpppy
         else if (wordsFinded != words.end())
         {
             countPrevious = wordsFinded->second;
-            count = (MAXINT - countPrevious > count) ? countPrevious + count : MAXINT;
-            words.at(key) = count;
+            count = (INT64_MAX - countPrevious > count) ? countPrevious + count : INT64_MAX;
+            wordsFinded->second = count;
             return false;
         }
         else if (count < CountThreshold())
@@ -102,43 +134,23 @@ namespace symspellcpppy
             return false;
         }
 
-        words.insert(std::pair<xstring, int64_t>(key, count));
+        const auto *word = &*words.emplace(key, count).first;
 
-        if (key.size() > maxDictionaryWordLength)
-            maxDictionaryWordLength = key.size();
+        maxDictionaryWordLength = std::max(maxDictionaryWordLength, static_cast<int>(key.size()));
 
         // create deletes
         auto edits = EditsPrefix(key);
         if (staging != nullptr)
         {
+            const auto *stagedWord = staging->TrackWord(key);
             for (const auto &edit : *edits)
-            {
-                staging->Add(GetstringHash(edit), key);
-            }
+                staging->Add(GetstringHash(edit), stagedWord);
         }
         else
         {
 
             for (const auto &edit : *edits)
-            {
-                int deleteHash = GetstringHash(edit);
-                auto deletesFinded = deletes->find(deleteHash);
-                std::vector<xstring> suggestions;
-                if (deletesFinded != deletes->end())
-                {
-                    suggestions = deletesFinded->second;
-                    std::vector<xstring> newSuggestions;
-                    newSuggestions.reserve(suggestions.size() + 1);
-                    std::copy(suggestions.begin(), suggestions.end(), std::back_inserter(newSuggestions));
-                    deletes->at(deleteHash) = suggestions = newSuggestions;
-                }
-                else
-                {
-                    suggestions = std::vector<xstring>(1);
-                    deletes->insert(std::pair<int, std::vector<xstring>>(deleteHash, suggestions));
-                }
-                suggestions[suggestions.size() - 1] = key;
-            }
+                deletes[GetstringHash(edit)].push_back(word);
         }
 
         return true;
@@ -146,177 +158,275 @@ namespace symspellcpppy
 
     bool SymSpell::DeleteDictionaryEntry(const xstring &key)
     {
-        auto wordsFinded = words.find(key);
-        if (wordsFinded != words.end())
-        {
-            words.erase(wordsFinded);
-            if (wordsFinded->first.size() == maxDictionaryWordLength)
-            {
-                int max_size = 0;
-                for (auto &word : words)
-                {
-                    max_size = std::max(static_cast<int>(word.first.size()), max_size);
-                }
-                maxDictionaryWordLength = max_size;
-            }
-            auto edits = EditsPrefix(key);
-            for (const auto &edit : *edits)
-            {
-                int deleteHash = GetstringHash(edit);
-                auto deletesFinded = deletes->find(deleteHash);
-                if (deletesFinded != deletes->end())
-                {
-                    auto delete_vec = deletesFinded->second;
-                    auto it = std::find(delete_vec.begin(), delete_vec.end(), key);
-                    if (it < delete_vec.end())
-                        delete_vec.erase(it);
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    bool
-    SymSpell::LoadBigramDictionary(const std::string &corpus, int termIndex, int countIndex, xchar separatorChars)
-    {
-        xifstream corpusStream;
-        corpusStream.open(corpus);
-#ifdef UNICODE_SUPPORT
-        std::locale utf8(std::locale(), new std::codecvt_utf8<wchar_t>);
-        corpusStream.imbue(utf8);
-#endif
-        if (!corpusStream.is_open())
+        const auto found = words.find(key);
+        if (found == words.end())
             return false;
 
-        return LoadBigramDictionary(corpusStream, termIndex, countIndex, separatorChars);
+        const auto edits = EditsPrefix(key);
+        for (const auto &edit : *edits)
+        {
+            const auto bucket = deletes.find(GetstringHash(edit));
+            if (bucket == deletes.end())
+                continue;
+            std::erase(bucket->second, &*found);
+            if (bucket->second.empty())
+                deletes.erase(bucket);
+        }
+
+        const bool wasLongest = key.size() == static_cast<std::size_t>(maxDictionaryWordLength);
+        words.erase(found);
+        if (wasLongest)
+        {
+            maxDictionaryWordLength = 0;
+            for (const auto &[word, count] : words)
+                maxDictionaryWordLength = std::max(maxDictionaryWordLength, static_cast<int>(word.size()));
+        }
+        return true;
     }
 
-    bool SymSpell::LoadBigramDictionary(xifstream &corpusStream, int termIndex, int countIndex, xchar separatorChars)
+    namespace
     {
-        xstring line;
-        int linePartsLength = (separatorChars == DEFAULT_SEPARATOR_CHAR) ? 3 : 2;
-        while (getline(corpusStream, line))
+        void SplitColumns(std::u32string_view line, xchar separator, std::vector<std::u32string_view> &columns)
         {
-            std::vector<xstring> lineParts;
-            xstringstream ss(line);
-            xstring token;
-            while (getline(ss, token, separatorChars))
-                lineParts.push_back(token);
-            xstring key;
+            columns.clear();
+            if (separator == DEFAULT_SEPARATOR_CHAR)
+            {
+                while (!line.empty())
+                {
+                    const auto start = std::ranges::find_if_not(line, unicode::is_space);
+                    const auto end = std::find_if(start, line.end(), unicode::is_space);
+                    if (start != end)
+                        columns.emplace_back(start, end);
+                    line.remove_prefix(end - line.begin());
+                }
+                return;
+            }
+
+            for (auto next = line.find(separator); next != line.npos; next = line.find(separator))
+            {
+                columns.push_back(line.substr(0, next));
+                line.remove_prefix(next + 1);
+            }
+            columns.push_back(line);
+        }
+
+        std::optional<int64_t> ParseCount(std::u32string_view text)
+        {
+            while (!text.empty() && unicode::is_space(text.front()))
+                text.remove_prefix(1);
+            while (!text.empty() && unicode::is_space(text.back()))
+                text.remove_suffix(1);
+            if (text.starts_with(U'+'))
+                text.remove_prefix(1);
+
+            const auto bytes = unicode::encode(text);
             int64_t count;
-            if (lineParts.size() >= linePartsLength)
-            {
-                key = (separatorChars == DEFAULT_SEPARATOR_CHAR) ? lineParts[termIndex] + XL(" ") +
-                                                                       lineParts[termIndex + 1]
-                                                                 : lineParts[termIndex];
-                try
-                {
-                    count = stoll(lineParts[countIndex]);
-                }
-                catch (...)
-                {
-                    printf("Cannot convert %s to integer\n", lineParts[countIndex].c_str());
-                }
-            }
-            else
-            {
-                key = line;
-                count = 1;
-            }
-            std::pair<xstring, int64_t> element(key, count);
-            bigrams.insert(element);
-            if (count < bigramCountMin)
-                bigramCountMin = count;
+            const auto end = bytes.data() + bytes.size();
+            const auto result = std::from_chars(bytes.data(), end, count);
+            if (result.ec == std::errc{} && result.ptr == end)
+                return count;
+            return std::nullopt;
         }
 
-        if (bigrams.empty())
-            return false;
-        return true;
-    }
-
-    bool SymSpell::LoadDictionary(const std::string &corpus, int termIndex, int countIndex, xchar separatorChars)
-    {
-
-        xifstream corpusStream(corpus);
-#ifdef UNICODE_SUPPORT
-        std::locale utf8(std::locale(), new std::codecvt_utf8<wchar_t>);
-        corpusStream.imbue(utf8);
-#endif
-        if (!corpusStream.is_open())
-            return false;
-
-        return LoadDictionary(corpusStream, termIndex, countIndex, separatorChars);
-    }
-
-    bool SymSpell::LoadDictionary(xifstream &corpusStream, int termIndex, int countIndex, xchar separatorChars)
-    {
-        auto staging = std::make_shared<SuggestionStage>(16384);
-        xstring line;
-        int i = 0;
-        int start, end;
-        start = clock();
-        while (getline(corpusStream, line))
+        void ValidateColumns(int termIndex, int countIndex)
         {
-            i++;
-            std::vector<xstring> lineParts;
-            xstringstream ss(line);
-            xstring token;
-            while (getline(ss, token, separatorChars))
-                lineParts.push_back(token);
-            if (lineParts.size() >= 2)
+            if (termIndex < 0 || countIndex < 0)
+                throw std::invalid_argument("Dictionary column indices cannot be negative");
+        }
+
+        int64_t AddCount(int64_t count, int64_t increment)
+        {
+            return count > INT64_MAX - increment ? INT64_MAX : count + increment;
+        }
+
+        int64_t EstimatedCount(double count)
+        {
+            if (!(count > 0))
+                return 0;
+            return count >= static_cast<double>(INT64_MAX) ? INT64_MAX : static_cast<int64_t>(count);
+        }
+
+        constexpr std::string_view archiveMagic = "SymSpellCppPy\x01";
+    }
+
+    bool SymSpell::LoadBigramDictionary(const std::filesystem::path &corpus, int termIndex, int countIndex,
+                                         xchar separator)
+    {
+        std::ifstream stream(corpus, std::ios::binary);
+        return stream && LoadBigramDictionary(stream, termIndex, countIndex, separator);
+    }
+
+    bool SymSpell::LoadBigramDictionary(std::istream &stream, int termIndex, int countIndex, xchar separator)
+    {
+        ValidateColumns(termIndex, countIndex);
+        const auto term = static_cast<std::size_t>(termIndex);
+        const auto countColumn = static_cast<std::size_t>(countIndex);
+        const bool splitTerm = separator == DEFAULT_SEPARATOR_CHAR;
+        bool loaded = false;
+        std::string bytes;
+        xstring line;
+        std::vector<std::u32string_view> columns;
+        for (bool first = true; unicode::read_line(stream, bytes, line, first); first = false)
+        {
+            SplitColumns(line, separator, columns);
+            if (columns.size() <= std::max(term + splitTerm, countColumn) || columns[term].empty())
+                continue;
+            const auto count = ParseCount(columns[countColumn]);
+            if (!count || *count < 0)
+                continue;
+
+            xstring key(columns[term]);
+            if (splitTerm)
+                key.append(1, U' ').append(columns[term + 1]);
+            bigrams.insert_or_assign(std::move(key), *count);
+            loaded = true;
+        }
+        if (loaded)
+        {
+            bigramCountMin = INT64_MAX;
+            for (const auto &[key, count] : bigrams)
+                bigramCountMin = std::min(bigramCountMin, count);
+        }
+        return loaded;
+    }
+
+    bool SymSpell::LoadDictionary(const std::filesystem::path &corpus, int termIndex, int countIndex,
+                                   xchar separator)
+    {
+        std::ifstream stream(corpus, std::ios::binary);
+        return stream && LoadDictionary(stream, termIndex, countIndex, separator);
+    }
+
+    bool SymSpell::LoadDictionary(std::istream &stream, int termIndex, int countIndex, xchar separator)
+    {
+        ValidateColumns(termIndex, countIndex);
+        const auto term = static_cast<std::size_t>(termIndex);
+        const auto count = static_cast<std::size_t>(countIndex);
+        auto staging = std::make_shared<SuggestionStage>(16384);
+        std::string bytes;
+        xstring line;
+        std::vector<std::u32string_view> columns;
+        for (bool first = true; unicode::read_line(stream, bytes, line, first); first = false)
+        {
+            SplitColumns(line, separator, columns);
+            if (columns.size() > term && !columns[term].empty())
             {
-                int64_t count = 1;
-                try
-                {
-                    count = std::stoll(lineParts[countIndex]);
-                }
-                catch (const std::invalid_argument &)
-                {
-                    // Do nothing
-                }
-                CreateDictionaryEntry(lineParts[termIndex], count, staging);
-            }
-            else
-            {
-                CreateDictionaryEntry(line, 1, staging);
+                const auto frequency = columns.size() > count ? ParseCount(columns[count]) : std::nullopt;
+                CreateDictionaryEntry(xstring(columns[term]), frequency.value_or(1), staging);
             }
         }
         CommitStaged(staging);
-        if (EntryCount() == 0)
-            return false;
-        return true;
+        return EntryCount() != 0;
     }
 
-    bool SymSpell::CreateDictionary(const std::string &corpus)
+    bool SymSpell::CreateDictionary(const std::filesystem::path &corpus)
     {
-        xifstream corpusStream;
-        corpusStream.open(corpus);
-#ifdef UNICODE_SUPPORT
-        std::locale utf8(std::locale(), new std::codecvt_utf8<wchar_t>);
-        corpusStream.imbue(utf8);
-#endif
-        if (!corpusStream.is_open())
-            return false;
-
-        return CreateDictionary(corpusStream);
+        std::ifstream stream(corpus, std::ios::binary);
+        return stream && CreateDictionary(stream);
     }
 
-    bool SymSpell::CreateDictionary(xifstream &corpusStream)
+    bool SymSpell::CreateDictionary(std::istream &stream)
     {
-        xstring line;
         auto staging = std::make_shared<SuggestionStage>(16384);
-        while (getline(corpusStream, line))
+        std::string bytes;
+        xstring line;
+        for (bool first = true; unicode::read_line(stream, bytes, line, first); first = false)
         {
-            for (const xstring &key : ParseWords(line))
-            {
+            for (const auto &key : ParseWords(line))
                 CreateDictionaryEntry(key, 1, staging);
-            }
         }
         CommitStaged(staging);
-        if (EntryCount() == 0)
-            return false;
-        return true;
+        return EntryCount() != 0;
+    }
+
+    void SymSpell::Save(std::ostream &stream) const
+    {
+        stream.write(archiveMagic.data(), archiveMagic.size());
+        cereal::PortableBinaryOutputArchive archive(stream, cereal::PortableBinaryOutputArchive::Options::LittleEndian());
+        archive(initialCapacity, maxDictionaryEditDistance, prefixLength, countThreshold, compactLevel,
+                maxDictionaryWordLength, belowThresholdWords, bigrams, bigramCountMin);
+
+        // Serialize the words once and represent delete buckets by their word IDs.
+        std::unordered_map<const WordCounts::value_type *, uint32_t> ids;
+        ids.reserve(words.size());
+        archive(static_cast<uint32_t>(words.size()));
+        for (const auto &word : words)
+        {
+            ids.emplace(&word, static_cast<uint32_t>(ids.size()));
+            archive(word.first, word.second);
+        }
+
+        archive(static_cast<uint32_t>(deletes.size()));
+        std::vector<uint32_t> bucket;
+        for (const auto &[hash, entries] : deletes)
+        {
+            bucket.clear();
+            for (const auto *word : entries)
+                bucket.push_back(ids.at(word));
+            archive(hash, bucket);
+        }
+    }
+
+    void SymSpell::Load(std::istream &stream)
+    {
+        std::string magic(archiveMagic.size(), '\0');
+        stream.read(magic.data(), magic.size());
+        if (magic == archiveMagic)
+        {
+            cereal::PortableBinaryInputArchive archive(stream);
+            int capacity, distance, prefix, threshold;
+            unsigned char compact;
+            archive(capacity, distance, prefix, threshold, compact);
+            SymSpell loaded(distance, prefix, threshold, capacity, compact);
+            archive(loaded.maxDictionaryWordLength, loaded.belowThresholdWords, loaded.bigrams,
+                    loaded.bigramCountMin);
+            uint32_t wordCount;
+            archive(wordCount);
+            loaded.words.reserve(wordCount);
+            std::vector<const WordCounts::value_type *> wordsById;
+            wordsById.reserve(wordCount);
+            for (uint32_t i = 0; i < wordCount; ++i)
+            {
+                xstring word;
+                int64_t count;
+                archive(word, count);
+                wordsById.push_back(&*loaded.words.emplace(std::move(word), count).first);
+            }
+
+            uint32_t bucketCount;
+            archive(bucketCount);
+            loaded.deletes.reserve(bucketCount);
+            std::vector<uint32_t> ids;
+            for (uint32_t i = 0; i < bucketCount; ++i)
+            {
+                int hash;
+                archive(hash, ids);
+                auto &entries = loaded.deletes[hash];
+                entries.reserve(ids.size());
+                for (const auto id : ids)
+                    entries.push_back(wordsById.at(id));
+            }
+            *this = std::move(loaded);
+            return;
+        }
+        if (magic.starts_with("SymSpellCppPy"))
+            throw std::invalid_argument("Unsupported SymSpellCppPy archive version");
+
+        // Older releases stored UTF-8 words and byte-based delete hashes. Rebuild that index.
+        stream.clear();
+        stream.seekg(0);
+        cereal::BinaryInputArchive archive(stream);
+        std::shared_ptr<std::unordered_map<int, std::vector<std::string>>> legacyDeletes;
+        std::unordered_map<std::string, int64_t> legacyWords;
+        int legacyMaxLength;
+        archive(legacyDeletes, legacyWords, legacyMaxLength);
+        SymSpell loaded(maxDictionaryEditDistance, prefixLength, 0, initialCapacity, compactLevel);
+        auto staging = std::make_shared<SuggestionStage>(16384);
+        for (const auto &[word, count] : legacyWords)
+            loaded.CreateDictionaryEntry(unicode::decode(word), count, staging);
+        loaded.CommitStaged(staging);
+        loaded.countThreshold = countThreshold;
+        *this = std::move(loaded);
     }
 
     void SymSpell::PurgeBelowThresholdWords()
@@ -326,9 +436,11 @@ namespace symspellcpppy
 
     void SymSpell::CommitStaged(const std::shared_ptr<SuggestionStage> &staging)
     {
-        if (deletes == nullptr)
-            deletes = std::make_shared<std::unordered_map<int, std::vector<xstring>>>(staging->DeleteCount());
-        staging->CommitTo(deletes);
+        if (!staging || staging->DeleteCount() == 0)
+            return;
+        if (deletes.empty())
+            deletes.reserve(staging->DeleteCount());
+        staging->CommitTo(deletes, words);
     }
 
     std::vector<SuggestItem> SymSpell::Lookup(const xstring &input, Verbosity verbosity)
@@ -350,13 +462,19 @@ namespace symspellcpppy
     SymSpell::Lookup(const xstring &original_input, Verbosity verbosity, int maxEditDistance, bool includeUnknown,
                      bool transferCasing)
     {
-        if (deletes == nullptr)
-            return std::vector<SuggestItem>{}; // Dictionary is empty
-
-        int skip = 0;
+        if (maxEditDistance < 0)
+            throw std::invalid_argument("Distance cannot be negative");
         if (maxEditDistance > maxDictionaryEditDistance)
             throw std::invalid_argument("Distance too large");
 
+        if (words.empty())
+        {
+            if (includeUnknown)
+                return {{original_input, maxEditDistance + 1, 0}};
+            return {};
+        }
+
+        bool skip = false;
         xstring lower_input;
 
         if (transferCasing)
@@ -369,25 +487,24 @@ namespace symspellcpppy
         std::vector<SuggestItem> suggestions;
         int inputLen = input.size();
         if (inputLen - maxEditDistance > maxDictionaryWordLength)
-            skip = 1;
+            skip = true;
 
         int64_t suggestionCount = 0;
-        if (words.count(input) && !skip)
+        if (const auto exact = words.find(input); exact != words.end() && !skip)
         {
-            suggestionCount = words.at(input);
+            suggestionCount = exact->second;
             suggestions.emplace_back(transferCasing ? original_input : input, 0, suggestionCount);
             if (verbosity != All)
-                skip = 1;
+                skip = true;
         }
 
         if (maxEditDistance == 0)
-            skip = 1;
+            skip = true;
 
         if (!skip)
         {
             std::unordered_set<xstring> hashset1;
-            std::unordered_set<xstring> hashset2;
-            hashset2.insert(input);
+            std::unordered_set<const WordCounts::value_type *> seenSuggestions;
 
             int maxEditDistance2 = maxEditDistance;
             int candidatePointer = 0;
@@ -417,13 +534,14 @@ namespace symspellcpppy
                     break;
                 }
 
-                auto deletes_found = deletes->find(GetstringHash(candidate));
+                auto deletes_found = deletes.find(GetstringHash(candidate));
 
                 // read candidate entry from std::unordered_map
-                if (deletes_found != deletes->end())
+                if (deletes_found != deletes.end())
                 {
-                    for (const xstring &suggestion : deletes_found->second)
+                    for (const auto *word : deletes_found->second)
                     {
+                        const auto &suggestion = word->first;
                         int suggestionLen = suggestion.size();
                         if (suggestion == input)
                             continue;
@@ -445,7 +563,7 @@ namespace symspellcpppy
                         {
                             // suggestions which have no common chars with input (inputLen<=maxEditDistance && suggestionLen<=maxEditDistance)
                             distance = std::max(inputLen, suggestionLen);
-                            auto flag = hashset2.insert(suggestion);
+                            auto flag = seenSuggestions.insert(word);
                             if (distance > maxEditDistance2 || !flag.second)
                                 continue;
                         }
@@ -456,21 +574,30 @@ namespace symspellcpppy
                             else
                                 distance = inputLen - 1;
 
-                            auto flag = hashset2.insert(suggestion);
+                            auto flag = seenSuggestions.insert(word);
                             if (distance > maxEditDistance2 || !flag.second)
                                 continue;
                         }
-                        else if ((prefixLength - maxEditDistance == candidateLen) && (((min_len = std::min(inputLen, suggestionLen) - prefixLength) > 1) && (input.substr(inputLen + 1 - min_len) !=
-                                                                                                                                                             suggestion.substr(suggestionLen + 1 - min_len))) ||
-                                 ((min_len > 0) && (input[inputLen - min_len] != suggestion[suggestionLen - min_len]) && ((input[inputLen - min_len - 1] != suggestion[suggestionLen - min_len]) || (input[inputLen - min_len] != suggestion[suggestionLen - min_len - 1]))))
-                        {
-                            continue;
-                        }
                         else
                         {
+                            // A delete using the whole budget in the prefix cannot also change the suffix.
+                            const int suffixLength = std::min(inputLen, suggestionLen) - prefixLength;
+                            if (candidateLen == prefixLength - maxEditDistance && suffixLength > 0)
+                            {
+                                const int inputStart = inputLen - suffixLength;
+                                const int suggestionStart = suggestionLen - suffixLength;
+                                const bool tailsDiffer = std::u32string_view(input).substr(inputStart + 1) !=
+                                    std::u32string_view(suggestion).substr(suggestionStart + 1);
+                                const bool boundaryDiffers = input[inputStart] != suggestion[suggestionStart] &&
+                                    (input[inputStart - 1] != suggestion[suggestionStart] ||
+                                     input[inputStart] != suggestion[suggestionStart - 1]);
+                                if (tailsDiffer || boundaryDiffers)
+                                    continue;
+                            }
+
                             if ((verbosity != All &&
                                  !DeleteInSuggestionPrefix(candidate, candidateLen, suggestion, suggestionLen)) ||
-                                !hashset2.insert(suggestion).second)
+                                !seenSuggestions.insert(word).second)
                                 continue;
                             distance = distanceComparer.Compare(input, suggestion, maxEditDistance2);
                             if (distance < 0)
@@ -479,7 +606,7 @@ namespace symspellcpppy
 
                         if (distance <= maxEditDistance2)
                         {
-                            suggestionCount = words[suggestion];
+                            suggestionCount = word->second;
                             SuggestItem si = SuggestItem(suggestion, distance, suggestionCount);
                             if (!suggestions.empty())
                             {
@@ -530,8 +657,7 @@ namespace symspellcpppy
             } // end while
 
             if (suggestions.size() > 1)
-                sort(suggestions.begin(), suggestions.end(), [](SuggestItem &l, SuggestItem &r)
-                     { return l.CompareTo(r) < 0 ? 1 : 0; });
+                std::sort(suggestions.begin(), suggestions.end(), SuggestItem::compare);
 
             if (transferCasing)
             {
@@ -542,11 +668,11 @@ namespace symspellcpppy
             }
         }
         if (includeUnknown && (suggestions.empty()))
-            suggestions.emplace_back(input, maxEditDistance + 1, 0);
+            suggestions.emplace_back(original_input, maxEditDistance + 1, 0);
         return suggestions;
     } // end if
 
-    bool SymSpell::DeleteInSuggestionPrefix(const xstring &deleteSugg, int deleteLen, xstring suggestion,
+    bool SymSpell::DeleteInSuggestionPrefix(const xstring &deleteSugg, int deleteLen, const xstring &suggestion,
                                             int suggestionLen) const
     {
         if (deleteLen == 0)
@@ -561,21 +687,25 @@ namespace symspellcpppy
                 j++;
             if (j == suggestionLen)
                 return false;
+            ++j;
         }
         return true;
     }
 
     std::vector<xstring> SymSpell::ParseWords(const xstring &text)
     {
-        xregex r(XL("['’\\w\\-\\[_\\]]+"));
-        xsmatch m;
+        const auto isTermCharacter = [](xchar ch) {
+            return unicode::is_word(ch) || ch == U'\'' || ch == U'’' ||
+                   ch == U'-' || ch == U'[' || ch == U']';
+        };
         std::vector<xstring> matches;
-        xstring::const_iterator ptr(text.cbegin());
-        while (regex_search(ptr, text.cend(), m, r))
+        for (auto start = text.begin(); start != text.end();)
         {
-            xstring matchLower = Helpers::string_lower(m[0]);
-            matches.push_back(matchLower);
-            ptr = m.suffix().first;
+            start = std::find_if(start, text.end(), isTermCharacter);
+            const auto end = std::find_if_not(start, text.end(), isTermCharacter);
+            if (start != end)
+                matches.push_back(Helpers::string_lower(xstring(start, end)));
+            start = end;
         }
         return matches;
     }
@@ -609,12 +739,14 @@ namespace symspellcpppy
         {
             const xstring sub_key = key.substr(0, prefixLength);
             m->insert(sub_key);
-            Edits(sub_key, 0, m);
+            if (maxDictionaryEditDistance > 0)
+                Edits(sub_key, 0, m);
         }
         else
         {
             m->insert(key);
-            Edits(key, 0, m);
+            if (maxDictionaryEditDistance > 0)
+                Edits(key, 0, m);
         }
         return m;
     }
@@ -650,6 +782,11 @@ namespace symspellcpppy
 
     std::vector<SuggestItem> SymSpell::LookupCompound(const xstring &input, int editDistanceMax, bool transferCasing)
     {
+        if (editDistanceMax < 0)
+            throw std::invalid_argument("Distance cannot be negative");
+        if (editDistanceMax > maxDictionaryEditDistance)
+            throw std::invalid_argument("Distance too large");
+
         std::vector<xstring> termList1 = ParseWords(input);
 
         std::vector<SuggestItem> suggestions;     // suggestions for a single term
@@ -678,7 +815,7 @@ namespace symspellcpppy
                     {
                         best2.term = termList1[i];
                         best2.distance = editDistanceMax + 1;
-                        best2.count = (long)((double)10 / pow((double)10, (double)best2.term.size())); // 0;
+                        best2.count = (int64_t)((double)10 / pow((double)10, (double)best2.term.size())); // 0;
                     }
 
                     int distance1 = best1.distance + best2.distance;
@@ -738,36 +875,33 @@ namespace symspellcpppy
                                 suggestionSplit.distance = distance2;
                                 if (bigrams.count(suggestionSplit.term) > 0)
                                 {
-                                    long bigramCount = bigrams.at(suggestionSplit.term);
+                                    int64_t bigramCount = bigrams.at(suggestionSplit.term);
                                     suggestionSplit.count = bigramCount;
                                     if (!suggestions.empty())
                                     {
                                         if ((suggestions1[0].term + suggestions2[0].term == termList1[i]))
                                         {
                                             suggestionSplit.count = std::max(suggestionSplit.count,
-                                                                             suggestions[0].count + 2);
+                                                                             AddCount(suggestions[0].count, 2));
                                         }
                                         else if ((suggestions1[0].term == suggestions[0].term) ||
                                                  (suggestions2[0].term == suggestions[0].term))
                                         {
                                             suggestionSplit.count = std::max(suggestionSplit.count,
-                                                                             suggestions[0].count + 1);
+                                                                             AddCount(suggestions[0].count, 1));
                                         }
                                     }
                                     else if ((suggestions1[0].term + suggestions2[0].term == termList1[i]))
                                     {
                                         suggestionSplit.count = std::max(suggestionSplit.count,
-                                                                         std::max(suggestions1[0].count,
-                                                                                  suggestions2[0].count) +
-                                                                             2);
+                                                                         AddCount(std::max(suggestions1[0].count, suggestions2[0].count), 2));
                                     }
                                 }
                                 else
                                 {
                                     suggestionSplit.count = std::min(bigramCountMin,
-                                                                     (int64_t)((double)suggestions1[0].count /
-                                                                               (double)N *
-                                                                               (double)suggestions2[0].count));
+                                                                     EstimatedCount(static_cast<double>(suggestions1[0].count) /
+                                                                                    N * suggestions2[0].count));
                                 }
 
                                 if (suggestionSplitBest.count == 0 ||
@@ -785,7 +919,7 @@ namespace symspellcpppy
                     {
                         SuggestItem si = SuggestItem();
                         si.term = termList1[i];
-                        si.count = (long)((double)10 / pow((double)10, (double)si.term.size()));
+                        si.count = (int64_t)((double)10 / pow((double)10, (double)si.term.size()));
                         si.distance = editDistanceMax + 1;
                         suggestionParts.push_back(si);
                     }
@@ -794,7 +928,7 @@ namespace symspellcpppy
                 {
                     SuggestItem si = SuggestItem();
                     si.term = termList1[i];
-                    si.count = (long)((double)10 / pow((double)10, (double)si.term.size()));
+                    si.count = (int64_t)((double)10 / pow((double)10, (double)si.term.size()));
                     si.distance = editDistanceMax + 1;
                     suggestionParts.push_back(si);
                 }
@@ -806,129 +940,130 @@ namespace symspellcpppy
         xstring s;
         for (const SuggestItem &si : suggestionParts)
         {
-            s += (si.term + XL(" "));
+            if (!s.empty())
+                s += U' ';
+            s += si.term;
             count *= (double)si.count / (double)N;
         }
-        rtrim(s);
         if (transferCasing)
         {
             s = Helpers::transfer_casing_for_similar_text(input, s);
         }
         std::vector<SuggestItem> suggestionsLine;
-        suggestionsLine.emplace_back(s, distanceComparer.Compare(input, s, MAXINT), (long)count);
+        suggestionsLine.emplace_back(s, distanceComparer.Compare(input, s, INT64_MAX), EstimatedCount(count));
         return suggestionsLine;
     }
 
     Info SymSpell::WordSegmentation(const xstring &input)
     {
-        return WordSegmentation(input, MaxDictionaryEditDistance(), maxDictionaryWordLength);
+        return WordSegmentation(input, MaxDictionaryEditDistance());
     }
 
     Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance)
     {
-        return WordSegmentation(input, maxEditDistance, maxDictionaryWordLength);
+        const auto wordLength = maxDictionaryWordLength > 0 ? maxDictionaryWordLength : static_cast<int>(input.size());
+        return WordSegmentation(input, maxEditDistance, std::max(1, wordLength));
     }
 
-    Info SymSpell::WordSegmentation(const xstring &input, int maxEditDistance, int maxSegmentationWordLength)
+    Info SymSpell::WordSegmentation(const xstring &originalInput, int maxEditDistance, int maxSegmentationWordLength)
     {
-        // v6.7
-        // normalize ligatures:
-        // "scientific"
-        // "scientiﬁc" "ﬁelds" "ﬁnal"
-        // TODO: Figure out how to do the below utf-8 normalization in C++.
-        // input = input.Normalize(System.Text.NormalizationForm.FormKC).Replace("\u002D", "");//.Replace("\uC2AD","");
-        int arraySize = std::min(maxSegmentationWordLength, (int)input.size());
-        std::vector<Info> compositions = std::vector<Info>(arraySize);
-        int circularIndex = -1;
+        if (maxEditDistance < 0)
+            throw std::invalid_argument("Distance cannot be negative");
+        if (maxEditDistance > maxDictionaryEditDistance)
+            throw std::invalid_argument("Distance too large");
+        if (maxSegmentationWordLength <= 0)
+            throw std::invalid_argument("max_segmentation_word_length must be positive");
 
-        for (int j = 0; j < input.size(); j++)
+        auto input = unicode::normalize(originalInput);
+        std::erase(input, U'-');
+        if (std::ranges::all_of(input, unicode::is_space))
+            return {};
+
+        const auto arraySize = std::min(maxSegmentationWordLength, static_cast<int>(input.size()));
+        std::vector<Info> compositions(arraySize);
+        std::vector<int> endPositions(arraySize, -1);
+        int circularIndex = arraySize - 1;
+        const auto isApostrophe = [](xchar ch) { return ch == U'\'' || ch == U'’'; };
+
+        for (int j = 0; j < static_cast<int>(input.size()); ++j)
         {
-            int imax = std::min((int)input.size() - j, maxSegmentationWordLength);
-            for (int i = 1; i <= imax; i++)
+            const auto limit = std::min(static_cast<int>(input.size()) - j, maxSegmentationWordLength);
+            for (int i = 1; i <= limit; ++i)
             {
-                xstring part = input.substr(j, i);
-                int separatorLength = 0;
-                int topEd = 0;
-                double topProbabilityLog = 0;
-                xstring topResult;
+                auto part = input.substr(j, i);
+                const int separatorLength = unicode::is_space(part.front()) ? 0 : 1;
+                if (separatorLength == 0)
+                    part.erase(0, 1);
+                const int removedSpaces = std::erase_if(part, unicode::is_space);
 
-                if (isxspace(part[0]))
+                const bool punctuation = part.size() == 1 && unicode::is_punctuation(part.front());
+                const bool apostropheSuffix = part.size() == 2 && isApostrophe(part.front());
+                if (part.size() > 1 && std::ranges::any_of(part, [&](xchar ch) {
+                        return !isApostrophe(ch) && unicode::is_punctuation(ch);
+                    }))
+                    continue;
+
+                int distance = removedSpaces;
+                double logProbability = 0;
+                xstring corrected = part;
+                if (!part.empty() && !punctuation && !apostropheSuffix)
                 {
-                    part = part.substr(1);
-                }
-                else
-                {
-                    separatorLength = 1;
-                }
-
-                topEd += part.size();
-                xregex r(XL(" "));
-                part = regex_replace(part, r, XL(""));
-                topEd -= part.size();
-
-                // v6.7
-                // Lookup against the lowercase term
-                auto partLower = Helpers::string_lower(part);
-                std::vector<SuggestItem> results = Lookup(partLower, Top, maxEditDistance);
-                if (!results.empty())
-                {
-                    topResult = results[0].term;
-
-                    // v6.7
-                    // retain/preserve upper case
-                    if (is_xupper(part[0]))
+                    const auto apostrophes = std::ranges::count_if(part, isApostrophe);
+                    auto lookup = Helpers::string_lower(part);
+                    std::ranges::replace(lookup, U'’', U'\'');
+                    const auto results = Lookup(lookup, Top, maxEditDistance);
+                    if (!results.empty() && std::ranges::count_if(results.front().term, isApostrophe) == apostrophes)
                     {
-                        topResult[0] = to_xupper(topResult[0]);
-                    }
-
-                    topEd += results[0].distance;
-                    topProbabilityLog = log10((double)results[0].count / (double)N);
-                }
-                else
-                {
-                    topResult = part;
-                    topEd += part.size();
-                    topProbabilityLog = log10(10.0 / (N * pow(10.0, part.size())));
-                }
-
-                int destinationIndex = ((i + circularIndex) % arraySize);
-
-                auto circular_distance = compositions[circularIndex].getDistance();
-                auto destination_distance = compositions[destinationIndex].getDistance();
-                auto circular_probablity = compositions[circularIndex].getProbability();
-                auto destination_probablity = compositions[destinationIndex].getProbability();
-
-                if (j == 0)
-                {
-                    compositions[destinationIndex].set(part, topResult, topEd, topProbabilityLog);
-                }
-                else if ((i == maxSegmentationWordLength) || (((circular_distance + topEd == destination_distance) || (circular_distance + separatorLength + topEd == destination_distance)) && (destination_probablity < circular_probablity + topProbabilityLog)) || (circular_distance + separatorLength + topEd < destination_distance))
-                {
-                    // v6.7
-                    // keep punctuation or spostrophe adjacent to previous word
-                    if (((topResult.size() == 1) && (is_xpunct(topResult[0]) > 0)) || ((topResult.size() == 2) &&
-                                                                                       (topResult.rfind(XL("’"), 0) ==
-                                                                                        0)))
-                    {
-                        xstring seg = compositions[circularIndex].getSegmented() + part;
-                        xstring correct = compositions[circularIndex].getCorrected() + topResult;
-                        int d = circular_distance + topEd;
-                        double prob = circular_probablity + topProbabilityLog;
-                        compositions[destinationIndex].set(seg, correct, d, prob);
+                        corrected = results.front().term;
+                        if (!corrected.empty() && unicode::is_upper(part.front()))
+                            corrected.front() = unicode::upper(corrected.front());
+                        if (part.find(U'’') != part.npos)
+                            std::ranges::replace(corrected, U'\'', U'’');
+                        distance += results.front().distance;
+                        logProbability = std::log10(static_cast<double>(results.front().count) / N);
                     }
                     else
                     {
-                        xstring seg = compositions[circularIndex].getSegmented() + XL(" ") + part;
-                        xstring correct = compositions[circularIndex].getCorrected() + XL(" ") + topResult;
-                        int d = circular_distance + separatorLength + topEd;
-                        double prob = circular_probablity + topProbabilityLog;
-                        compositions[destinationIndex].set(seg, correct, d, prob);
+                        distance += static_cast<int>(part.size());
+                        logProbability = 1 - std::log10(static_cast<double>(N)) - part.size();
                     }
                 }
+
+                const auto destinationIndex = (i + circularIndex) % arraySize;
+                auto &destination = compositions[destinationIndex];
+                if (j == 0)
+                {
+                    destination.set(std::move(part), std::move(corrected), distance, logProbability);
+                    endPositions[destinationIndex] = j + i;
+                    continue;
+                }
+
+                const auto &previous = compositions[circularIndex];
+                const auto previousDistance = previous.getDistance();
+                const auto combinedProbability = previous.getProbability() + logProbability;
+                const auto unspacedDistance = previousDistance + distance;
+                const bool attach = corrected.empty() || punctuation || apostropheSuffix;
+                const bool addSpace = !attach && !previous.getSegmented().empty();
+                const auto spacedDistance = unspacedDistance + (addSpace ? separatorLength : 0);
+
+                if (endPositions[destinationIndex] != j + i || spacedDistance < destination.getDistance() ||
+                    ((unspacedDistance == destination.getDistance() || spacedDistance == destination.getDistance()) &&
+                     destination.getProbability() < combinedProbability))
+                {
+                    auto segmented = previous.getSegmented();
+                    auto correctedString = previous.getCorrected();
+                    if (addSpace)
+                    {
+                        segmented += U' ';
+                        correctedString += U' ';
+                    }
+                    segmented += part;
+                    correctedString += corrected;
+                    destination.set(std::move(segmented), std::move(correctedString), spacedDistance, combinedProbability);
+                    endPositions[destinationIndex] = j + i;
+                }
             }
-            circularIndex++;
-            if (circularIndex == arraySize)
-                circularIndex = 0;
+            circularIndex = (circularIndex + 1) % arraySize;
         }
         return compositions[circularIndex];
     }

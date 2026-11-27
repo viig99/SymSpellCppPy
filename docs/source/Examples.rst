@@ -1,140 +1,72 @@
-Examples
-========
+Correction and segmentation
+===========================
 
-This document contains examples of usage for the SymSpellCppPy library. This library is used for dictionary loading, spelling correction, and error fixing. 
+Choose a method based on what you want to correct.
 
-Loading the dictionary
-----------------------
+.. list-table::
+   :header-rows: 1
+   :widths: 34 33 33
 
-.. code-block:: python
+   * - Method
+     - Example input
+     - Example result
+   * - :meth:`~SymSpellCppPy.SymSpell.lookup`
+     - ``recieve``
+     - ``receive``
+   * - :meth:`~SymSpellCppPy.SymSpell.lookup_compound`
+     - ``the quick brown fox jumps overthe lazy dog``
+     - ``the quick brown fox jumps over the lazy dog``
+   * - :meth:`~SymSpellCppPy.SymSpell.word_segmentation`
+     - ``Scientiﬁc-research``
+     - ``Scientific research``
 
-    import SymSpellCppPy
-    symSpell = SymSpellCppPy.SymSpell()
-    symSpell.load_dictionary(corpus="resources/frequency_dictionary_en_82_765.txt", term_index=0, count_index=1, separator=" ")
+Run with the bundled English dictionaries
+-----------------------------------------
 
-Checking dictionary properties
-------------------------------
+The unigram list supplies spelling candidates and frequencies. The bigram list
+helps compound lookup rank alternative splits.
 
-The `SymSpell` class provides methods to inspect the loaded dictionary:
+.. literalinclude:: ../../examples/quickstart.py
+   :language: python
 
-- To check the number of words in the dictionary, use the `word_count()` method:
+Rank suggestions
+----------------
 
-.. code-block:: python
+``TOP`` returns at most one result. ``CLOSEST`` returns all suggestions at the
+smallest distance found. ``ALL`` returns every suggestion within the distance
+limit. Results are ranked by ascending edit distance, then descending frequency.
 
-    print(symSpell.word_count())  # Outputs: 82781
+.. doctest::
 
-- To find the length of the longest word in the dictionary, use the `max_length()` method:
+   >>> from SymSpellCppPy import SymSpell, Verbosity
+   >>> spell = SymSpell(max_dictionary_edit_distance=2)
+   >>> for term, count in [("cat", 40), ("hat", 20), ("car", 30)]:
+   ...     _ = spell.create_dictionary_entry(term, count)
+   >>> [(item.term, item.distance) for item in spell.lookup("bat", Verbosity.ALL)]
+   [('cat', 1), ('hat', 1), ('car', 2)]
+   >>> spell.lookup("unlisted", Verbosity.TOP)
+   []
+   >>> spell.lookup("unlisted", Verbosity.TOP, include_unknown=True)[0].term
+   'unlisted'
+   >>> spell.lookup("Catt", Verbosity.TOP, transfer_casing=True)[0].term
+   'Cat'
 
-.. code-block:: python
+``max_edit_distance`` defaults to the index limit set at construction. A
+smaller value can narrow individual lookups. With ``include_unknown=True``,
+the fallback has count 0 and distance one above the lookup limit.
 
-    print(symSpell.max_length())  # Outputs: 28
-
-- To count the number of unique delete combinations formed, use the `entry_count()` method:
-
-.. code-block:: python
-
-    print(symSpell.entry_count())  # Outputs: 661047
-
-Spelling correction
--------------------
-
-The `lookup` method allows you to find the correct spelling for a term from the dictionary:
-
-- To find the closest spelling, use `SymSpellCppPy.Verbosity.CLOSEST`:
-
-.. code-block:: python
-
-    terms = symSpell.lookup("tke", SymSpellCppPy.Verbosity.CLOSEST)
-    print(terms[0].term)  # Outputs: "take"
-
-- You can also specify a `max_edit_distance` to limit the search to terms within a certain edit distance:
-
-.. code-block:: python
-
-    terms = symSpell.lookup("extrine", SymSpellCppPy.Verbosity.CLOSEST, max_edit_distance=2)
-    print(terms[0].term)  # Outputs: "extreme"
-
-    terms = symSpell.lookup("extrine", SymSpellCppPy.Verbosity.CLOSEST, max_edit_distance=1)
-    print(terms)  # Outputs: []
-
-Error fixing
+Segment text
 ------------
 
-SymSpellCppPy also includes features to fix compound errors and word segmentation issues in sentences:
+Pass ``max_edit_distance=0`` to insert word boundaries with exact dictionary
+matches. The result contains the segmented input, the corrected output, and
+the edit and probability scores.
 
-- To fix compound errors in a sentence, use the `lookup_compound` method:
+.. doctest::
 
-.. code-block:: python
-
-    terms = symSpell.lookup_compound("whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixthgrade and ins pired him")
-    print(terms[0].term)
-    # Outputs: "whereas to love head dated for much of theist who couldn't read in sixth grade and inspired him"
-
-- To correct word segmentation issues in a sentence, use the `word_segmentation` method:
-
-.. code-block:: python
-
-    segmented_info = symSpell.word_segmentation("thequickbrownfoxjumpsoverthelazydog")
-    print(segmented_info.segmented_string)
-    # Outputs: "the quick brown fox jumps over the lazy dog"
-
-    segmented_info = symSpell.word_segmentation("thequickbrownfoxjumpsoverthelazydog")
-    print(segmented_info.corrected_string)
-    # Outputs: "they quick brown fox jumps over therapy dog"
-
-Saving and Loading SymSpell object
-----------------------------------
-
-To save the internal representation of a loaded `SymSpell` for fast reuse next time, use the `save_pickle` method. Do not use pickle natively:
-
-.. code-block:: python
-
-    symSpell.save_pickle("symspell_binary.bin")
-
-To load the internal representation of a loaded `SymSpell` from a saved binary, use the `load_pickle` method:
-
-.. code-block:: python
-
-    anotherSymSpell = SymSpellCppPy.SymSpell()
-    anotherSymSpell.load_pickle("symspell_binary.bin")
-    terms = anotherSymSpell.lookup("tke", SymSpellCppPy.Verbosity.CLOSEST)
-    print(terms[0].term)
-
-Top N suggestions
--------------------
-
-You can also request the top N suggestions for a given word:
-
-.. code-block:: python
-
-    # To get the top 5 closest terms to a given word, use the `TOP` verbosity:
-    terms = symSpell.lookup("huse", SymSpellCppPy.Verbosity.TOP, max_edit_distance=2, include_unknown=True)
-    for term in terms[:5]:
-        print(term.term)
-    # Outputs: "house", "use", "hue", "hues", "hose"
-
-Ignoring case and digits
-------------------------
-
-By default, SymSpellCppPy is case-sensitive and considers digits as valid characters. However, you can modify this behavior:
-
-.. code-block:: python
-
-    # To ignore case when checking a term, use the `ignore_case` parameter:
-    terms = symSpell.lookup("THe", SymSpellCppPy.Verbosity.CLOSEST, ignore_case=True)
-    print(terms[0].term)  # Outputs: "the"
-
-    # To ignore digits when checking a term, use the `ignore_digit` parameter:
-    terms = symSpell.lookup("3rd", SymSpellCppPy.Verbosity.CLOSEST, ignore_digit=True)
-    print(terms[0].term)  # Outputs: "red"
-
-Ignoring words with numbers
-----------------------------
-
-You may also choose to ignore words containing numbers:
-
-.. code-block:: python
-
-    # To ignore words with numbers when checking a term, use the `ignore_word_with_number` parameter:
-    terms = symSpell.lookup("l33t", SymSpellCppPy.Verbosity.CLOSEST, ignore_word_with_number=True)
-    print(terms[0].term)  # Outputs: "let"
+   >>> spell = SymSpell()
+   >>> _ = spell.create_dictionary_entry("scientific", 10000)
+   >>> _ = spell.create_dictionary_entry("research", 10000)
+   >>> result = spell.word_segmentation("Scientiﬁc-research", max_edit_distance=0)
+   >>> result.corrected_string
+   'Scientific research'

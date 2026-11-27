@@ -1,9 +1,16 @@
-build:
-  image: latest
+version: 2
 
-conda:
-  file: docs/environment.yml
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.13"
+
+sphinx:
+  configuration: docs/source/conf.py
+  fail_on_warning: true
 
 python:
-  version: 3.7
-  setup_py_install: true
+  install:
+    - method: pip
+      path: .
+      extra_requirements: [docs]
