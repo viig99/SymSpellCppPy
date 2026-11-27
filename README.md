@@ -60,7 +60,7 @@ Set the release version in `pyproject.toml`. The installed package exposes the s
 
 ## Benchmarks
 
-See [benchmark results and reproduction commands](docs/source/benchmarks.rst). Run `python benchmark.py` to measure the installed extension. Install `.[benchmark]` and pass `--implementation python` to run the shared workloads against `symspellpy`.
+See [benchmark results and reproduction commands](docs/source/benchmarks.rst) for the comparison with `symspellpy` and native `symspell_rs`. Run `python benchmark.py` to measure the installed extension. The `benchmark` extra adds `symspellpy` with the optional `editdistpy` accelerator.
 
 ## Acknowledgements
 

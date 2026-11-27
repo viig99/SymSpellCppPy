@@ -1,0 +1,15 @@
+[package]
+name = "symspell-rs-benchmark"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+publish = false
+
+[dependencies]
+symspell_rs = "=7.0.1"
+
+[features]
+gxhash = ["symspell_rs/gxhash"]
+
+[profile.release]
+lto = true

@@ -28,7 +28,10 @@ def measure(operation, repeat, iterations):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--implementation", choices=["cpp", "python"], default="cpp")
+    parser.add_argument(
+        "--implementation", choices=["cpp", "python", "python-fast"], default="cpp",
+        help="use SymSpellCppPy, symspellpy, or symspellpy with editdistpy",
+    )
     parser.add_argument("--rounds", type=int, default=7)
     parser.add_argument("--resources", type=Path, default=ROOT / "resources")
     parser.add_argument("--queries", type=Path, default=ROOT / "tests/fortests/noisy_query_en_1000.txt")
@@ -40,22 +43,37 @@ def main():
         from SymSpellCppPy import SymSpell, Verbosity
 
         distribution = "SymSpellCppPy"
+        new_index = SymSpell
+        backend = "C++ Damerau OSA"
     else:
         from symspellpy import SymSpell, Verbosity
+        from symspellpy.editdistance import DistanceAlgorithm, EditDistance
 
         distribution = "symspellpy"
+        algorithm = DistanceAlgorithm.DAMERAU_OSA
+        backend = "Python Damerau OSA"
+        if args.implementation == "python-fast":
+            try:
+                accelerator_version = version("editdistpy")
+            except PackageNotFoundError:
+                parser.error("python-fast requires symspellpy[editdistpy]")
+            algorithm = DistanceAlgorithm.DAMERAU_OSA_FAST
+            backend = f"editdistpy {accelerator_version}"
+
+        def new_index():
+            return SymSpell(distance_comparer=EditDistance(algorithm))
 
     dictionary = str(args.resources / "frequency_dictionary_en_82_765.txt")
     bigrams = str(args.resources / "frequency_bigramdictionary_en_243_342.txt")
     queries = [line.split()[0] for line in args.queries.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     def load_words():
-        spell = SymSpell()
+        spell = new_index()
         assert spell.load_dictionary(dictionary, 0, 1)
         return spell
 
     def load_bigrams():
-        assert SymSpell().load_bigram_dictionary(bigrams, 0, 2)
+        assert new_index().load_bigram_dictionary(bigrams, 0, 2)
 
     spell = load_words()
     assert spell.load_bigram_dictionary(bigrams, 0, 2)
@@ -91,6 +109,7 @@ def main():
     print(json.dumps({
         "implementation": distribution,
         "version": package_version,
+        "distance_backend": backend,
         "python": sys.version.split()[0],
         "platform": platform.platform(),
         "rounds": args.rounds,

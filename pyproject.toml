@@ -32,7 +32,7 @@ Issues = "https://github.com/viig99/SymSpellCppPy/issues"
 [project.optional-dependencies]
 test = ["pytest>=8"]
 docs = ["sphinx>=8", "furo>=2024.8.6"]
-benchmark = ["symspellpy>=6.9,<7"]
+benchmark = ["symspellpy[editdistpy]>=6.10.2,<7"]
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"

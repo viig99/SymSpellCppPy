@@ -42,3 +42,5 @@ dist/
 .venv/
 .pytest_cache/
 coverage.xml
+
+/benchmarks/rust/target/
