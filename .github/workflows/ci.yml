@@ -28,7 +28,7 @@ jobs:
           - {os: macos-latest, python: "3.10"}
           - {os: macos-latest, python: "3.15"}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
@@ -39,7 +39,7 @@ jobs:
   native:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cmake -S . -B build/native -DBUILD_FOR_TEST=ON -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build/native --parallel 2
       - run: ctest --test-dir build/native --output-on-failure
@@ -47,7 +47,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -64,7 +64,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
